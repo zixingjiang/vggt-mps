@@ -40,13 +40,15 @@ def download_model(args):
             # Try using huggingface_hub if available
             from huggingface_hub import hf_hub_download
 
+            import shutil
             model_file = hf_hub_download(
                 repo_id=MODEL_CONFIG["huggingface_id"],
                 filename="model.pt",
                 cache_dir=MODEL_DIR,
-                local_dir=MODEL_DIR
             )
-            print(f"✅ Downloaded to: {model_file}")
+            shutil.copy(model_file, MODEL_CONFIG["local_path"])
+            model_path = MODEL_CONFIG["local_path"]
+            print(f"✅ Downloaded to: {model_path}")
 
         except ImportError:
             print("⚠️ huggingface_hub not installed")
