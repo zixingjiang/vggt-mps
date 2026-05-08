@@ -90,16 +90,30 @@ def run_demo(args) -> None:
             h, w, _ = img.shape
             depth = np.random.randn(h, w) * 2 + 5
             depth_maps.append(depth)
+        camera_poses = None
+        point_cloud = None
     else:
         # Process with real model
         print("\n🔮 Running VGGT reconstruction...")
         processor = VGGTProcessor(device=DEVICE)
-        depth_maps = processor.process_images(images)
+        result = processor.process_images(images)
+        if isinstance(result, dict):
+            depth_maps = result['depth_maps']
+            camera_poses = result.get('camera_poses')
+            point_cloud = result.get('point_cloud')
+        else:
+            depth_maps = result
+            camera_poses = None
+            point_cloud = None
 
     # Create visualizations
     print("\n📊 Creating visualizations...")
     try:
-        output_files = create_visualizations(images, depth_maps, OUTPUT_DIR)
+        output_files = create_visualizations(
+            images, depth_maps, OUTPUT_DIR,
+            camera_poses=camera_poses,
+            point_cloud=point_cloud,
+        )
 
         print("\n" + "=" * 60)
         print("✅ Demo complete!")
