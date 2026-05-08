@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional, Union
 import sys
 
 # Add VGGT repo to path
-REPO_PATH = Path(__file__).parent.parent / "repo" / "vggt"
+REPO_PATH = Path(__file__).parent.parent.parent / "repo" / "vggt"
 if REPO_PATH.exists():
     sys.path.insert(0, str(REPO_PATH))
 
@@ -54,8 +54,8 @@ class VGGTProcessor:
         if model_path is None:
             # Default paths to check
             possible_paths = [
-                Path(__file__).parent.parent / "models" / "vggt_model.pt",
-                Path(__file__).parent.parent / "repo" / "vggt" / "vggt_model.pt",
+                Path(__file__).parent.parent.parent / "models" / "vggt_model.pt",
+                Path(__file__).parent.parent.parent / "repo" / "vggt" / "vggt_model.pt",
             ]
             for path in possible_paths:
                 if path.exists():
