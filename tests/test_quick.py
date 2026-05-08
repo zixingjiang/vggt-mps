@@ -18,7 +18,7 @@ else:
     print("⚠️ MPS not available, using CPU")
 
 # Add VGGT to path
-sys.path.insert(0, str(Path(__file__).parent / "repo" / "vggt"))
+sys.path.insert(0, str(Path(__file__).parent / "vendor" / "vggt"))
 
 try:
     from vggt.models.vggt import VGGT

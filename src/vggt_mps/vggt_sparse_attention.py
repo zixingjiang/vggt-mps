@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 
 # Add VGGT to path (if available)
-# sys.path.insert(0, str(Path(__file__).parent.parent / "repo" / "vggt"))
+# sys.path.insert(0, str(Path(__file__).parent.parent / "vendor" / "vggt"))
 
 # Note: These imports would come from the actual VGGT repo
 # For now, we'll use mock implementations
@@ -159,7 +159,7 @@ def benchmark_sparse_vs_dense():
 
     # Load pretrained VGGT
     print("\n📥 Loading pretrained VGGT...")
-    model_path = Path(__file__).parent.parent / "repo" / "vggt" / "vggt_model.pt"
+    model_path = Path(__file__).parent.parent / "vendor" / "vggt" / "vggt_model.pt"
 
     # Regular VGGT
     vggt_regular = VGGT()

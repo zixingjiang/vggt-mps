@@ -11,7 +11,7 @@ import time
 import tracemalloc
 
 # Add paths
-sys.path.insert(0, str(Path(__file__).parent / "repo" / "vggt"))
+sys.path.insert(0, str(Path(__file__).parent / "vendor" / "vggt"))
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from vggt.models.vggt import VGGT
@@ -92,7 +92,7 @@ def main():
         model_regular = VGGT()
 
         # Try to load weights
-        model_path = Path(__file__).parent / "repo" / "vggt" / "vggt_model.pt"
+        model_path = Path(__file__).parent / "vendor" / "vggt" / "vggt_model.pt"
         if model_path.exists():
             checkpoint = torch.load(model_path, map_location=device, weights_only=True)
             model_regular.load_state_dict(checkpoint)

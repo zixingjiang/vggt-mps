@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 # Add repo to path
-repo_path = Path(__file__).parent / "repo" / "vggt"
+repo_path = Path(__file__).parent / "vendor" / "vggt"
 sys.path.insert(0, str(repo_path))
 
 print("=" * 50)

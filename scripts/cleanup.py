@@ -59,7 +59,7 @@ BUILD_ARTIFACTS: List[CleanupTarget] = [
 
 MODEL_ARTIFACTS: List[CleanupTarget] = [
     CleanupTarget(PROJECT_ROOT / "models", True),
-    CleanupTarget(PROJECT_ROOT / "repo" / "vggt" / "vggt_model.pt", False),
+    CleanupTarget(PROJECT_ROOT / "vendor" / "vggt" / "vggt_model.pt", False),
 ]
 
 

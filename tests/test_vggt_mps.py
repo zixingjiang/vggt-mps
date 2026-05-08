@@ -27,7 +27,7 @@ print("-" * 50)
 # Try to load the model
 try:
     print("Loading VGGT model weights...")
-    model_path = Path("repo/vggt/vggt_model.pt")
+    model_path = Path("vendor/vggt/vggt_model.pt")
 
     if model_path.exists():
         print(f"✅ Model file found: {model_path}")

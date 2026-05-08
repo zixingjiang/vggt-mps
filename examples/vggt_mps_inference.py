@@ -13,13 +13,13 @@ from typing import List, Dict, Any
 class VGGTModelMPS:
     """VGGT wrapper for Apple Silicon MPS inference"""
 
-    def __init__(self, model_path: str = "repo/vggt/vggt_model.pt"):
+    def __init__(self, model_path: str = "vendor/vggt/vggt_model.pt"):
         self.device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
         print(f"Using device: {self.device}")
 
         # Import real VGGT
         import sys
-        sys.path.insert(0, str(Path(__file__).parent.parent / "repo" / "vggt"))
+        sys.path.insert(0, str(Path(__file__).parent.parent / "vendor" / "vggt"))
         from vggt.models.vggt import VGGT
 
         # Load the real VGGT model

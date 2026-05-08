@@ -16,13 +16,13 @@ device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 print(f"Device: {device}")
 
 # Add VGGT to path
-sys.path.insert(0, str(Path(__file__).parent / "repo" / "vggt"))
+sys.path.insert(0, str(Path(__file__).parent / "vendor" / "vggt"))
 
 from vggt.models.vggt import VGGT
 from vggt.utils.load_fn import load_and_preprocess_images
 
 # Check if model file exists
-model_path = Path(__file__).parent / "repo" / "vggt" / "vggt_model.pt"
+model_path = Path(__file__).parent / "vendor" / "vggt" / "vggt_model.pt"
 if not model_path.exists():
     print(f"❌ Model file not found at {model_path}")
     print("Please download from: https://huggingface.co/facebook/VGGT-1B/resolve/main/model.pt")

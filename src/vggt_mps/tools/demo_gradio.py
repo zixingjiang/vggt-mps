@@ -303,7 +303,7 @@ def vggt_create_3d_scene(
     try:
         # Add VGGT repo path to sys.path for visual_util import
         import sys
-        vggt_repo_path = PROJECT_ROOT / "repo" / "vggt"
+        vggt_repo_path = PROJECT_ROOT / "vendor" / "vggt"
         if str(vggt_repo_path) not in sys.path:
             sys.path.insert(0, str(vggt_repo_path))
 

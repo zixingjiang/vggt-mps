@@ -21,7 +21,7 @@ SRC_DIR = PROJECT_ROOT / "src"
 DATA_DIR = PROJECT_ROOT / "data"
 OUTPUT_DIR = PROJECT_ROOT / "outputs"
 MODEL_DIR = PROJECT_ROOT / "models"
-REPO_DIR = PROJECT_ROOT / "repo"
+REPO_DIR = PROJECT_ROOT / "vendor"
 
 # Validate path calculation - check for expected project markers
 # This validation ensures PROJECT_ROOT works correctly across:

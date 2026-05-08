@@ -34,7 +34,7 @@ def main():
     print("=" * 60)
 
     model_url = "https://huggingface.co/facebook/VGGT-1B/resolve/main/model.pt"
-    model_path = Path("repo/vggt/vggt_model.pt")
+    model_path = Path("vendor/vggt/vggt_model.pt")
 
     if model_path.exists():
         print(f"✅ Model already exists at {model_path}")

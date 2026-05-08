@@ -56,7 +56,7 @@ print("-" * 60)
 
 # Use real VGGT model
 import sys
-sys.path.insert(0, str(Path(__file__).parent.parent / "repo" / "vggt"))
+sys.path.insert(0, str(Path(__file__).parent.parent / "vendor" / "vggt"))
 from vggt.models.vggt import VGGT
 from vggt.utils.load_fn import load_and_preprocess_images
 
@@ -65,7 +65,7 @@ dtype = torch.float32 if device.type == "mps" else torch.float16
 
 # Load the real VGGT model
 print("📥 Loading VGGT-1B model (5GB)...")
-model_path = Path(__file__).parent.parent / "repo" / "vggt" / "vggt_model.pt"
+model_path = Path(__file__).parent.parent / "vendor" / "vggt" / "vggt_model.pt"
 if model_path.exists():
     print(f"📂 Loading from local: {model_path}")
     model = VGGT()

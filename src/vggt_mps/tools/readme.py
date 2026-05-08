@@ -78,7 +78,7 @@ def vggt_quick_start_inference(
     log_file = OUTPUT_DIR / f"{out_prefix}_log.txt"
 
     # Add the VGGT repo path to sys.path
-    vggt_repo_path = PROJECT_ROOT / "repo" / "vggt"
+    vggt_repo_path = PROJECT_ROOT / "vendor" / "vggt"
     if str(vggt_repo_path) not in sys.path:
         sys.path.append(str(vggt_repo_path))
 
@@ -226,7 +226,7 @@ def vggt_detailed_component_predictions(
     log_file = OUTPUT_DIR / f"{out_prefix}_log.txt"
 
     # Add the VGGT repo path to sys.path
-    vggt_repo_path = PROJECT_ROOT / "repo" / "vggt"
+    vggt_repo_path = PROJECT_ROOT / "vendor" / "vggt"
     if str(vggt_repo_path) not in sys.path:
         sys.path.append(str(vggt_repo_path))
 
@@ -478,7 +478,7 @@ def vggt_visualize_depth_maps(
     log_file = OUTPUT_DIR / f"{out_prefix}_log.txt"
 
     # Add the VGGT repo path to sys.path
-    vggt_repo_path = PROJECT_ROOT / "repo" / "vggt"
+    vggt_repo_path = PROJECT_ROOT / "vendor" / "vggt"
     if str(vggt_repo_path) not in sys.path:
         sys.path.append(str(vggt_repo_path))
 
@@ -628,7 +628,7 @@ def vggt_visualize_point_tracks(
     log_file = OUTPUT_DIR / f"{out_prefix}_log.txt"
 
     # Add the VGGT repo path to sys.path
-    vggt_repo_path = PROJECT_ROOT / "repo" / "vggt"
+    vggt_repo_path = PROJECT_ROOT / "vendor" / "vggt"
     if str(vggt_repo_path) not in sys.path:
         sys.path.append(str(vggt_repo_path))
 
@@ -864,7 +864,7 @@ def vggt_alternative_model_loading(
     log_file = OUTPUT_DIR / f"{out_prefix}_log.txt"
 
     # Add the VGGT repo path to sys.path
-    vggt_repo_path = PROJECT_ROOT / "repo" / "vggt"
+    vggt_repo_path = PROJECT_ROOT / "vendor" / "vggt"
     if str(vggt_repo_path) not in sys.path:
         sys.path.append(str(vggt_repo_path))
 

@@ -9,7 +9,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 
 # Add paths
-sys.path.insert(0, str(Path(__file__).parent / "repo" / "vggt"))
+sys.path.insert(0, str(Path(__file__).parent / "vendor" / "vggt"))
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 print("="*70)
@@ -50,7 +50,7 @@ print("="*70)
 model = VGGT()
 
 # Try loading weights
-model_path = Path(__file__).parent / "repo" / "vggt" / "vggt_model.pt"
+model_path = Path(__file__).parent / "vendor" / "vggt" / "vggt_model.pt"
 if model_path.exists():
     print("Loading model weights...")
     checkpoint = torch.load(model_path, map_location=device, weights_only=True)

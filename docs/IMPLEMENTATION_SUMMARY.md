@@ -93,7 +93,7 @@ vggt-mps/
 │   ├── SPARSE_ATTENTION_RESULTS.md # Performance results
 │   └── README.md                 # Project documentation
 │
-└── repo/vggt/                     # 📦 VGGT model
+└── vendor/vggt/                  # 📦 VGGT model (git submodule)
     ├── hubconf.py                # Torch hub config
     └── vggt_model.pt            # Model weights (5GB)
 ```

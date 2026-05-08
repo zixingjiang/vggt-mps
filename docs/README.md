@@ -133,7 +133,7 @@ vggt-mps/
 │   └── test_hub_load.py       # Hub loading test
 ├── scripts/                     # Utility scripts
 │   └── download_model.py      # Model downloader
-├── repo/vggt/                   # VGGT source
+├── vendor/vggt/                # VGGT source (git submodule)
 │   ├── hubconf.py              # Torch hub config
 │   └── vggt_model.pt          # Model (5GB)
 ├── tmp/                         # Working directory
@@ -211,7 +211,7 @@ python -c "import torch; print(torch.backends.mps.is_available())"
 
 ```bash
 # Verify model file
-ls -lh repo/vggt/vggt_model.pt
+ls -lh vendor/vggt/vggt_model.pt
 # Should show ~5GB file
 ```
 

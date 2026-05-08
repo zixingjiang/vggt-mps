@@ -26,7 +26,7 @@ print(f"Device: {device}")
 print("-" * 60)
 
 # Load kitchen images from VGGT examples
-kitchen_dir = Path("/Users/speed/Downloads/Paper2Agent/VGGT_Agent/repo/vggt/examples/kitchen/images")
+kitchen_dir = Path("/Users/speed/Downloads/Paper2Agent/VGGT_Agent/vendor/vggt/examples/kitchen/images")
 output_dir = Path("/Users/speed/Downloads/Paper2Agent/VGGT_Agent/tmp/outputs")
 output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -57,7 +57,7 @@ print("-" * 60)
 
 # Use real VGGT model
 import sys
-sys.path.insert(0, str(Path(__file__).parent.parent / "repo" / "vggt"))
+sys.path.insert(0, str(Path(__file__).parent.parent / "vendor" / "vggt"))
 from vggt.models.vggt import VGGT
 from vggt.utils.load_fn import load_and_preprocess_images
 
@@ -66,7 +66,7 @@ dtype = torch.float32 if device.type == "mps" else torch.float16
 
 # Load the real VGGT model
 print("📥 Loading VGGT-1B model (5GB)...")
-model_path = Path(__file__).parent.parent / "repo" / "vggt" / "vggt_model.pt"
+model_path = Path(__file__).parent.parent / "vendor" / "vggt" / "vggt_model.pt"
 if model_path.exists():
     print(f"📂 Loading from local: {model_path}")
     model = VGGT()

@@ -42,7 +42,7 @@ vggt-mps/
     commands/                   # CLI subcommands (demo, reconstruct, test, benchmark, web)
     utils/                      # Model loader, image utils, export
   tests/                        # MPS, sparse attention, integration tests
-  repo/vggt/                    # Vendored upstream VGGT source
+  vendor/vggt/                   # VGGT upstream source (git submodule)
 ```
 
 ## Sparse attention
@@ -157,7 +157,7 @@ Available MCP tools: `vggt_quick_start_inference`, `vggt_extract_video_frames`, 
 - The `vggt download` command pulls ~5 GB over the network with no resume support.
 - Not published to PyPI yet. Install from source.
 - Sparse attention memory numbers in the table above are asymptotic ratios, not measured byte counts.
-- The vendored `repo/vggt/` tree is a snapshot and may drift from upstream.
+- The vendored `vendor/vggt/` submodule tracks upstream facebookresearch/vggt.
 
 ## References
 
