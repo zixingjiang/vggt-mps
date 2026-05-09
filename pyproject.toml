@@ -60,13 +60,17 @@ dev = [
     "pre-commit>=3.0.0",
 ]
 web = [
-    "fastmcp>=0.1.0",
     "gradio>=3.40.0",
     "plotly>=5.15.0",
     "viser>=0.1.0",
+    "trimesh>=4.0.0",
+]
+demo = [
+    "pycolmap>=3.0.0",
+    "onnxruntime>=1.15.0",
 ]
 all = [
-    "vggt-mps[dev,web]",
+    "vggt-mps[dev,web,demo]",
 ]
 
 [project.urls]
