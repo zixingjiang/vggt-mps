@@ -29,6 +29,7 @@ if _vggt_repo not in _sys.path:
 
 from visual_util import segment_sky, download_file_from_url
 from vggt.models.vggt import VGGT
+from vggt_mps.config import MODEL_DIR
 from vggt.utils.load_fn import load_and_preprocess_images
 from vggt.utils.geometry import closed_form_inverse_se3, unproject_depth_map_to_point_map
 from vggt.utils.pose_enc import pose_encoding_to_extri_intri
@@ -202,13 +203,15 @@ def apply_sky_segmentation(conf: np.ndarray, image_folder: str) -> np.ndarray:
     sky_masks_dir = image_folder.rstrip("/") + "_sky_masks"
     os.makedirs(sky_masks_dir, exist_ok=True)
 
-    if not os.path.exists("skyseg.onnx"):
+    _skyseg_path = str(MODEL_DIR / "skyseg.onnx")
+    if not os.path.exists(_skyseg_path):
+        MODEL_DIR.mkdir(parents=True, exist_ok=True)
         print("Downloading skyseg.onnx...")
         download_file_from_url(
-            "https://huggingface.co/JianyuanWang/skyseg/resolve/main/skyseg.onnx", "skyseg.onnx"
+            "https://huggingface.co/JianyuanWang/skyseg/resolve/main/skyseg.onnx", _skyseg_path
         )
 
-    skyseg_session = onnxruntime.InferenceSession("skyseg.onnx")
+    skyseg_session = onnxruntime.InferenceSession(_skyseg_path)
     image_files = sorted(glob.glob(os.path.join(image_folder, "*")))
     sky_mask_list = []
 
