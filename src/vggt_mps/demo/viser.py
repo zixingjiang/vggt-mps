@@ -29,7 +29,8 @@ if _vggt_repo not in _sys.path:
 
 from visual_util import segment_sky, download_file_from_url
 from vggt.models.vggt import VGGT
-from vggt_mps.config import MODEL_DIR
+from vggt_mps.config import MODEL_DIR, get_precision, get_sparse_enabled
+from vggt_mps.vggt_core import VGGTProcessor
 from vggt.utils.load_fn import load_and_preprocess_images
 from vggt.utils.geometry import closed_form_inverse_se3, unproject_depth_map_to_point_map
 from vggt.utils.pose_enc import pose_encoding_to_extri_intri
@@ -276,28 +277,23 @@ def run(args):
         model.load_state_dict(torch.hub.load_state_dict_from_url(_URL))
     model.eval()
     model = model.to(device)
+    model = VGGTProcessor.apply_precision(model, get_precision())
+    if get_sparse_enabled():
+        from vggt_mps.vggt_sparse_attention import make_vggt_sparse
+        model = make_vggt_sparse(model, device=device)
 
     print(f"Loading images from {args.image_folder}...")
     image_names = glob.glob(os.path.join(args.image_folder, "*"))
     print(f"Found {len(image_names)} images")
 
     images = load_and_preprocess_images(image_names).to(device)
+    if get_precision() == "fp16":
+        images = images.half()
     print(f"Preprocessed images shape: {images.shape}")
 
     print("Running inference...")
-    if device == "cuda":
-        dtype = torch.bfloat16 if torch.cuda.get_device_capability()[0] >= 8 else torch.float16
-    elif device == "mps":
-        dtype = torch.float32
-    else:
-        dtype = torch.float32
-
     with torch.no_grad():
-        if device == "cuda":
-            with torch.cuda.amp.autocast(dtype=dtype):
-                predictions = model(images)
-        else:
-            predictions = model(images)
+        predictions = model(images)
 
     print("Converting pose encoding to extrinsic and intrinsic matrices...")
     extrinsic, intrinsic = pose_encoding_to_extri_intri(predictions["pose_enc"], images.shape[-2:])
@@ -308,6 +304,9 @@ def run(args):
     for key in predictions.keys():
         if isinstance(predictions[key], torch.Tensor):
             predictions[key] = predictions[key].cpu().numpy().squeeze(0)
+    for key in predictions.keys():
+        if isinstance(predictions[key], np.ndarray) and predictions[key].dtype == np.float16:
+            predictions[key] = predictions[key].astype(np.float32)
 
     if args.use_point_map:
         print("Visualizing 3D points from point map")

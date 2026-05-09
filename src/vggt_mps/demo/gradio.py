@@ -27,7 +27,8 @@ from vggt.models.vggt import VGGT
 from vggt.utils.load_fn import load_and_preprocess_images
 from vggt.utils.pose_enc import pose_encoding_to_extri_intri
 from vggt.utils.geometry import unproject_depth_map_to_point_map
-from vggt_mps.config import get_model_path
+from vggt_mps.config import get_model_path, get_precision, get_sparse_enabled
+from vggt_mps.vggt_core import VGGTProcessor
 
 
 def _resolve_device():
@@ -52,6 +53,10 @@ else:
     model.load_state_dict(torch.hub.load_state_dict_from_url(_URL))
 model.eval()
 model = model.to(_DEVICE)
+model = VGGTProcessor.apply_precision(model, get_precision())
+if get_sparse_enabled():
+    from vggt_mps.vggt_sparse_attention import make_vggt_sparse
+    model = make_vggt_sparse(model, device=_DEVICE)
 
 
 def run_model(target_dir, model) -> dict:
@@ -65,22 +70,13 @@ def run_model(target_dir, model) -> dict:
         raise ValueError("No images found. Check your upload.")
 
     images = load_and_preprocess_images(image_names).to(device)
+    if get_precision() == "fp16":
+        images = images.half()
     print(f"Preprocessed images shape: {images.shape}")
 
     print("Running inference...")
-    if device.type == "mps":
-        dtype = torch.float32
-    elif device.type == "cuda":
-        dtype = torch.bfloat16 if torch.cuda.get_device_capability()[0] >= 8 else torch.float16
-    else:
-        dtype = torch.float32
-
     with torch.no_grad():
-        if device.type == "cuda":
-            with torch.cuda.amp.autocast(dtype=dtype):
-                predictions = model(images)
-        else:
-            predictions = model(images)
+        predictions = model(images)
 
     print("Converting pose encoding...")
     extrinsic, intrinsic = pose_encoding_to_extri_intri(predictions["pose_enc"], images.shape[-2:])
@@ -90,6 +86,10 @@ def run_model(target_dir, model) -> dict:
     for key in list(predictions.keys()):
         if isinstance(predictions[key], torch.Tensor):
             predictions[key] = predictions[key].cpu().numpy().squeeze(0)
+    # Convert float16 predictions to float32 for downstream compat (np.percentile, etc.)
+    for key in list(predictions.keys()):
+        if isinstance(predictions[key], np.ndarray) and predictions[key].dtype == np.float16:
+            predictions[key] = predictions[key].astype(np.float32)
     predictions["pose_enc_list"] = None
 
     print("Computing world points from depth map...")

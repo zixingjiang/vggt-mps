@@ -22,6 +22,8 @@ if _vggt_repo not in _sys.path:
 
 from vggt.models.vggt import VGGT
 from vggt.utils.load_fn import load_and_preprocess_images_square
+from vggt_mps.config import get_precision, get_sparse_enabled
+from vggt_mps.vggt_core import VGGTProcessor
 from vggt.utils.pose_enc import pose_encoding_to_extri_intri
 from vggt.utils.geometry import unproject_depth_map_to_point_map
 from vggt.utils.helper import create_pixel_coordinate_grid, randomly_limit_trues
@@ -61,38 +63,24 @@ def _resolve_device():
         return "cpu"
 
 
-def _resolve_dtype(device: str):
-    if device == "mps":
-        return torch.float32
-    elif device == "cuda":
-        return torch.bfloat16 if torch.cuda.get_device_capability()[0] >= 8 else torch.float16
-    else:
-        return torch.float32
-
-
-def run_VGGT(model, images, dtype, device, resolution=518):
+def run_VGGT(model, images, resolution=518):
     assert len(images.shape) == 4
     assert images.shape[1] == 3
 
     images = F.interpolate(images, size=(resolution, resolution), mode="bilinear", align_corners=False)
 
     with torch.no_grad():
-        if device == "cuda":
-            with torch.cuda.amp.autocast(dtype=dtype):
-                images = images[None]
-                aggregated_tokens_list, ps_idx = model.aggregator(images)
-        else:
-            images = images[None]
-            aggregated_tokens_list, ps_idx = model.aggregator(images)
+        images = images[None]
+        aggregated_tokens_list, ps_idx = model.aggregator(images)
 
         pose_enc = model.camera_head(aggregated_tokens_list)[-1]
         extrinsic, intrinsic = pose_encoding_to_extri_intri(pose_enc, images.shape[-2:])
         depth_map, depth_conf = model.depth_head(aggregated_tokens_list, images, ps_idx)
 
-    extrinsic = extrinsic.squeeze(0).cpu().numpy()
-    intrinsic = intrinsic.squeeze(0).cpu().numpy()
-    depth_map = depth_map.squeeze(0).cpu().numpy()
-    depth_conf = depth_conf.squeeze(0).cpu().numpy()
+    extrinsic = extrinsic.squeeze(0).cpu().numpy().astype(np.float32)
+    intrinsic = intrinsic.squeeze(0).cpu().numpy().astype(np.float32)
+    depth_map = depth_map.squeeze(0).cpu().numpy().astype(np.float32)
+    depth_conf = depth_conf.squeeze(0).cpu().numpy().astype(np.float32)
     return extrinsic, intrinsic, depth_map, depth_conf
 
 
@@ -104,9 +92,7 @@ def demo_fn(args):
     random.seed(args.seed)
 
     device = _resolve_device()
-    dtype = _resolve_dtype(device)
     print(f"Using device: {device}")
-    print(f"Using dtype: {dtype}")
 
     model = VGGT()
     from vggt_mps.config import get_model_path
@@ -119,6 +105,10 @@ def demo_fn(args):
         model.load_state_dict(torch.hub.load_state_dict_from_url(_URL))
     model.eval()
     model = model.to(device)
+    model = VGGTProcessor.apply_precision(model, get_precision())
+    if get_sparse_enabled():
+        from vggt_mps.vggt_sparse_attention import make_vggt_sparse
+        model = make_vggt_sparse(model, device=device)
     print("Model loaded")
 
     image_dir = os.path.join(args.scene_dir, "images")
@@ -132,10 +122,12 @@ def demo_fn(args):
 
     images, original_coords = load_and_preprocess_images_square(image_path_list, img_load_resolution)
     images = images.to(device)
+    if get_precision() == "fp16":
+        images = images.half()
     original_coords = original_coords.to(device)
     print(f"Loaded {len(images)} images from {image_dir}")
 
-    extrinsic, intrinsic, depth_map, depth_conf = run_VGGT(model, images, dtype, device, vggt_fixed_resolution)
+    extrinsic, intrinsic, depth_map, depth_conf = run_VGGT(model, images, vggt_fixed_resolution)
     points_3d = unproject_depth_map_to_point_map(depth_map, extrinsic, intrinsic)
 
     if args.use_ba:
@@ -143,13 +135,7 @@ def demo_fn(args):
         scale = img_load_resolution / vggt_fixed_resolution
         shared_camera = args.shared_camera
 
-        if device == "cuda":
-            autocast_ctx = torch.cuda.amp.autocast(dtype=dtype)
-        else:
-            from contextlib import nullcontext
-            autocast_ctx = nullcontext()
-
-        with autocast_ctx:
+        with torch.no_grad():
             pred_tracks, pred_vis_scores, pred_confs, points_3d, points_rgb = predict_tracks(
                 images,
                 conf=depth_conf,
