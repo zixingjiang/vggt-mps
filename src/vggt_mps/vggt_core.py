@@ -54,7 +54,7 @@ class VGGTProcessor:
         if model_path is None:
             # Default paths to check
             possible_paths = [
-                Path(__file__).parent.parent.parent / "models" / "vggt_model.pt",
+                Path(__file__).parent.parent.parent / "models" / "vggt-1b.pt",
                 Path(__file__).parent.parent.parent / "vendor" / "vggt" / "vggt_model.pt",
             ]
             for path in possible_paths:

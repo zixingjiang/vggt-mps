@@ -27,6 +27,7 @@ from vggt.models.vggt import VGGT
 from vggt.utils.load_fn import load_and_preprocess_images
 from vggt.utils.pose_enc import pose_encoding_to_extri_intri
 from vggt.utils.geometry import unproject_depth_map_to_point_map
+from vggt_mps.config import get_model_path
 
 
 def _resolve_device():
@@ -42,8 +43,13 @@ _DEVICE = _resolve_device()
 print(f"Using device: {_DEVICE}")
 
 model = VGGT()
-_URL = "https://huggingface.co/facebook/VGGT-1B/resolve/main/model.pt"
-model.load_state_dict(torch.hub.load_state_dict_from_url(_URL))
+local_path = get_model_path()
+if local_path.exists():
+    print(f"Loading model from {local_path}")
+    model.load_state_dict(torch.load(local_path, map_location=_DEVICE, weights_only=True))
+else:
+    _URL = "https://huggingface.co/facebook/VGGT-1B/resolve/main/model.pt"
+    model.load_state_dict(torch.hub.load_state_dict_from_url(_URL))
 model.eval()
 model = model.to(_DEVICE)
 

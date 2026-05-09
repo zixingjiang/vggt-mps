@@ -263,8 +263,14 @@ def run(args):
 
     print("Initializing and loading VGGT model...")
     model = VGGT()
-    _URL = "https://huggingface.co/facebook/VGGT-1B/resolve/main/model.pt"
-    model.load_state_dict(torch.hub.load_state_dict_from_url(_URL))
+    from vggt_mps.config import get_model_path
+    local_path = get_model_path()
+    if local_path.exists():
+        print(f"Loading model from {local_path}")
+        model.load_state_dict(torch.load(local_path, map_location=device, weights_only=True))
+    else:
+        _URL = "https://huggingface.co/facebook/VGGT-1B/resolve/main/model.pt"
+        model.load_state_dict(torch.hub.load_state_dict_from_url(_URL))
     model.eval()
     model = model.to(device)
 
