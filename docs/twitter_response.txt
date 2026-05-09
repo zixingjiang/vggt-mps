@@ -1,9 +1,0 @@
-@ducha_aiki You're absolutely right - caught me with placeholder code! 😅 Just pushed the fix with real VGGT implementation:
-
-✅ Now uses actual VGGT-1B model (5GB weights)
-✅ Real depth/camera/3D predictions on MPS
-✅ No more synthetic gradients
-
-The stubs were from initial testing - forgot to swap them out. Thanks for the callout! Updated repo should work properly now with full MPS acceleration for the real model.
-
-Tested on M2 Max, getting good perf with float32 (MPS doesn't support bfloat16 yet). Let me know if you hit any issues!
