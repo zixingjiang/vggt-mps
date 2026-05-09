@@ -4,6 +4,7 @@ VGGT with Sparse Attention - No Retraining Required!
 Patches VGGT's attention mechanism at runtime for O(n) scaling
 """
 
+import types
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -11,21 +12,15 @@ from typing import Optional
 import sys
 from pathlib import Path
 
-# Add VGGT to path (if available)
-# sys.path.insert(0, str(Path(__file__).parent.parent / "vendor" / "vggt"))
-
-# Note: These imports would come from the actual VGGT repo
-# For now, we'll use mock implementations
-# from vggt.models.vggt import VGGT
-# from vggt.models.aggregator import Aggregator
-
 from vggt_mps.megaloc_mps import MegaLocMPS
 
 
 class SparseAttentionAggregator(nn.Module):
     """
-    Drop-in replacement for VGGT's Aggregator with sparse attention
+    Drop-in replacement for VGGT's Aggregator with sparse attention.
     No retraining needed - uses existing weights!
+    Works by monkey-patching global attention blocks to inject the
+    covisibility mask into F.scaled_dot_product_attention.
     """
 
     def __init__(self, original_aggregator: nn.Module, megaloc: MegaLocMPS):
@@ -39,7 +34,6 @@ class SparseAttentionAggregator(nn.Module):
         with torch.no_grad():
             # Handle both [S, C, H, W] and [B, S, C, H, W] formats
             if images.ndim == 4:
-                # Single batch case [S, C, H, W]
                 images = images.unsqueeze(0)  # [1, S, C, H, W]
 
             B, S = images.shape[:2]
@@ -47,59 +41,77 @@ class SparseAttentionAggregator(nn.Module):
             for b in range(B):
                 batch_features = []
                 for i in range(S):
-                    # Extract single image [C, H, W] and add batch dim
-                    single_image = images[b, i].unsqueeze(0)  # [1, C, H, W]
+                    single_image = images[b, i].unsqueeze(0).float()  # DINOv2 expects float32
                     feat = self.megaloc.extract_features(single_image)
-                    batch_features.append(feat.squeeze(0))  # Remove batch dim
+                    batch_features.append(feat.squeeze(0))
                 features.append(torch.stack(batch_features))  # [S, D]
             features = torch.stack(features)  # [B, S, D]
 
-            # Compute covisibility for each batch
             masks = []
             for b in range(B):
                 mask = self.megaloc.compute_covisibility_matrix(
                     features[b],
                     threshold=0.7,
-                    k_nearest=10  # Each image attends to 10 nearest
+                    k_nearest=10
                 )
                 masks.append(mask)
 
             self.attention_mask = torch.stack(masks)  # [B, S, S]
 
     def forward(self, x):
-        """Forward with sparse attention - patches the attention computation"""
-        # Store original attention function
-        original_attention = self.aggregator.attention if hasattr(self.aggregator, 'attention') else None
+        """
+        Forward with sparse attention.
+        Patches global attention blocks to use covisibility mask.
+        Frame attention (intra-image) remains dense.
+        """
+        original_forwards = []
 
-        # Monkey-patch attention to use our mask
-        def sparse_attention(query, key, value):
-            # Standard attention
-            scores = torch.matmul(query, key.transpose(-2, -1))
-            scores = scores / (key.shape[-1] ** 0.5)
+        if self.attention_mask is not None and hasattr(self.aggregator, 'global_blocks'):
+            mask = self.attention_mask
+            if mask.ndim == 2:
+                mask = mask.unsqueeze(0)  # [1, S, S]
 
-            # Apply covisibility mask if available
-            if self.attention_mask is not None:
-                # Expand mask to match attention shape
-                mask = self.attention_mask.unsqueeze(1)  # Add head dimension
-                # Set non-covisible pairs to very negative value
-                scores = scores.masked_fill(mask == 0, -1e9)
+            for block in self.aggregator.global_blocks:
+                attn_inst = block.attn
+                orig_forward = attn_inst.forward
+                original_forwards.append((attn_inst, orig_forward))
 
-            # Softmax and apply to values
-            attn_weights = F.softmax(scores, dim=-1)
-            output = torch.matmul(attn_weights, value)
+                def make_patched(frame_mask):
+                    def patched_forward(self_attn, x, pos=None):
+                        B, N, C = x.shape
+                        S = frame_mask.shape[-1]
+                        tokens_per_frame = N // S
 
-            return output
+                        # Expand frame-level mask to patch-level
+                        m = frame_mask.float()
+                        m = m.repeat_interleave(tokens_per_frame, dim=1)
+                        m = m.repeat_interleave(tokens_per_frame, dim=2)
 
-        # Temporarily replace attention
-        if hasattr(self.aggregator, 'attention'):
-            self.aggregator.attention = sparse_attention
+                        additive = torch.where(m > 0, 0.0, float('-inf'))
+                        additive = additive.to(dtype=x.dtype, device=x.device)
+                        additive = additive.unsqueeze(1)
 
-        # Run original forward
+                        qkv = self_attn.qkv(x).reshape(B, N, 3, self_attn.num_heads, self_attn.head_dim).permute(2, 0, 3, 1, 4)
+                        q, k, v = qkv.unbind(0)
+                        q, k = self_attn.q_norm(q), self_attn.k_norm(k)
+                        if self_attn.rope is not None:
+                            q = self_attn.rope(q, pos)
+                            k = self_attn.rope(k, pos)
+
+                        out = F.scaled_dot_product_attention(q, k, v, attn_mask=additive,
+                            dropout_p=self_attn.attn_drop.p if self_attn.training else 0.0)
+                        out = out.transpose(1, 2).reshape(B, N, C)
+                        out = self_attn.proj(out)
+                        out = self_attn.proj_drop(out)
+                        return out
+                    return patched_forward
+
+                attn_inst.forward = types.MethodType(make_patched(mask), attn_inst)
+
         output = self.aggregator(x)
 
-        # Restore original attention
-        if original_attention is not None:
-            self.aggregator.attention = original_attention
+        for obj, fn in original_forwards:
+            obj.forward = fn
 
         return output
 

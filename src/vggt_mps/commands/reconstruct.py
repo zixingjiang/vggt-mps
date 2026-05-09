@@ -74,17 +74,11 @@ def run_reconstruction(args):
 
     # Initialize processor
     print(f"\n🚀 Initializing VGGT on {DEVICE}")
-    processor = VGGTProcessor(device=DEVICE)
-
-    # Apply sparse attention if requested
-    if args.sparse:
-        print(f"⚡ Enabling sparse attention (O(n) memory scaling)")
-        print(f"  • Covisibility threshold: {SPARSE_CONFIG['covisibility_threshold']}")
-        processor.model = make_vggt_sparse(processor.model, device=DEVICE)
+    processor = VGGTProcessor(device=DEVICE, precision=getattr(args, 'precision', 'fp32'), sparse=getattr(args, 'sparse', False))
 
     # Process images
     print("\n🔄 Processing images...")
-    if args.sparse and len(images) > 10:
+    if getattr(args, 'sparse', False) and len(images) > 10:
         print(f"  💡 Sparse attention enabled - handling {len(images)} images efficiently")
 
     try:

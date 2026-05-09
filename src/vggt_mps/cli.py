@@ -11,26 +11,14 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="VGGT 3D Reconstruction on Apple Silicon",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  # Launch Gradio web UI (vendor mirror)
-  vggt demo gradio
-
-  # Launch Viser 3D viewer (vendor mirror)
-  vggt demo viser --image_folder /path/to/images
-
-  # Run COLMAP reconstruction (vendor mirror)
-  vggt demo colmap --scene_dir /path/to/scene --use_ba
-
-  # Process images with VGGT
-  vggt reconstruct data/*.jpg --sparse
-
-  # Launch web interface
-  vggt web
-
-  # Benchmark
-  vggt benchmark
-        """,
+    )
+    parser.add_argument(
+        "--precision", choices=["fp32", "fp16"], default="fp32",
+        help="Inference precision (fp32 for full precision, fp16 for faster inference with less memory)",
+    )
+    parser.add_argument(
+        "--sparse", action="store_true",
+        help="Use sparse attention (O(n) memory scaling for many images)",
     )
 
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
@@ -115,7 +103,6 @@ Examples:
     # ── Existing commands ─────────────────────────────────────────────────
     recon_parser = subparsers.add_parser("reconstruct", help="3D reconstruction from images")
     recon_parser.add_argument("images", nargs="+", help="Image files to process")
-    recon_parser.add_argument("--sparse", action="store_true", help="Use sparse attention")
     recon_parser.add_argument("--output", type=str, default="outputs", help="Output directory")
     recon_parser.add_argument("--export", choices=["ply", "obj", "glb"], help="Export format")
 
@@ -139,7 +126,13 @@ Examples:
         default="huggingface", help="Download source",
     )
 
+    patch_parser = subparsers.add_parser("patch", help="Patch vendor VGGT files for MPS compatibility")
+
     args = parser.parse_args()
+
+    from vggt_mps.config import set_precision, set_sparse_enabled
+    set_precision(args.precision)
+    set_sparse_enabled(args.sparse)
 
     if not args.command:
         parser.print_help()
@@ -183,6 +176,10 @@ Examples:
         elif args.command == "download":
             from .commands.download_model import download_model
             download_model(args)
+
+        elif args.command == "patch":
+            from .commands.patch_vendor import apply_vendor_patches
+            apply_vendor_patches()
 
         else:
             parser.print_help()

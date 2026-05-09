@@ -14,10 +14,16 @@ from .vggt_core import VGGTProcessor
 from .config import (
     DEVICE,
     MODEL_CONFIG,
+    PRECISION,
     SPARSE_CONFIG,
+    SPARSE_ENABLED,
     get_device,
     get_model_path,
+    get_precision,
+    get_sparse_enabled,
     is_model_available,
+    set_precision,
+    set_sparse_enabled,
 )
 
 __all__ = [
@@ -30,8 +36,14 @@ __all__ = [
     # Configuration
     "DEVICE",
     "MODEL_CONFIG",
+    "PRECISION",
     "SPARSE_CONFIG",
+    "SPARSE_ENABLED",
     "get_device",
     "get_model_path",
+    "get_precision",
+    "get_sparse_enabled",
     "is_model_available",
+    "set_precision",
+    "set_sparse_enabled",
 ]

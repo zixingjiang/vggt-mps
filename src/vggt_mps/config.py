@@ -133,6 +133,28 @@ EXPORT_FORMATS = {
     "glb": {"extension": ".glb", "binary": True},
 }
 
+# Precision configuration
+PRECISION = "fp32"
+
+# Sparse attention configuration
+SPARSE_ENABLED = False
+
+def set_sparse_enabled(val: bool) -> None:
+    global SPARSE_ENABLED
+    SPARSE_ENABLED = bool(val)
+
+def get_sparse_enabled() -> bool:
+    return SPARSE_ENABLED
+
+def set_precision(val: str) -> None:
+    global PRECISION
+    if val not in ("fp32", "fp16"):
+        raise ValueError(f"Invalid precision: {val}. Choose 'fp32' or 'fp16'")
+    PRECISION = val
+
+def get_precision() -> str:
+    return PRECISION
+
 # Logging configuration
 LOGGING = {
     "level": os.getenv("LOG_LEVEL", "INFO"),
@@ -150,10 +172,12 @@ def load_from_env() -> None:
         WEB_PORT: Port for web interface (int)
         WEB_SHARE: Enable public sharing for Gradio (true/false)
     """
-    global SPARSE_CONFIG, WEB_CONFIG
+    global SPARSE_CONFIG, SPARSE_ENABLED, WEB_CONFIG
 
     if os.getenv("USE_SPARSE_ATTENTION"):
-        SPARSE_CONFIG["enabled"] = os.getenv("USE_SPARSE_ATTENTION").lower() == "true"
+        val = os.getenv("USE_SPARSE_ATTENTION").lower() == "true"
+        SPARSE_CONFIG["enabled"] = val
+        set_sparse_enabled(val)
 
     if os.getenv("COVISIBILITY_THRESHOLD"):
         try:

@@ -18,16 +18,31 @@ if REPO_PATH.exists():
 class VGGTProcessor:
     """VGGT model processor for 3D reconstruction"""
 
-    def __init__(self, device: Union[str, torch.device] = "mps"):
+    def __init__(self, device: Union[str, torch.device] = "mps", precision: str = "fp32", sparse: bool = False):
         """
         Initialize VGGT processor
 
         Args:
-            device: Device to run model on (mps, cuda, cpu)
+            device: Device to run model on (mps, cpu)
+            precision: Inference precision ('fp32' or 'fp16')
+            sparse: Use sparse attention for O(n) memory scaling
         """
         self.device = torch.device(device) if isinstance(device, str) else device
         self.model = None
-        self.dtype = torch.float32 if self.device.type == "mps" else torch.float16
+        self.precision = precision
+        self.sparse = sparse
+
+    def _apply_sparse(self):
+        if self.sparse:
+            from vggt_mps.vggt_sparse_attention import make_vggt_sparse
+            self.model = make_vggt_sparse(self.model, device=str(self.device))
+        return self.model
+
+    @staticmethod
+    def apply_precision(model, precision: str):
+        if precision == "fp16":
+            model = model.half()
+        return model
 
     def load_model(self, model_path: Optional[Path] = None) -> None:
         """
@@ -78,7 +93,9 @@ class VGGTProcessor:
 
                 self.model.load_state_dict(checkpoint)
                 self.model = self.model.to(self.device)
+                self.model = self.apply_precision(self.model, self.precision)
                 print("✅ Model loaded successfully from local path!")
+                self.model = self._apply_sparse()
                 return  # Success - exit early
             except Exception as e:
                 print(f"⚠️ Error loading model from disk: {e}")
@@ -99,6 +116,8 @@ class VGGTProcessor:
             print("📥 Loading model from HuggingFace...")
             try:
                 self.model = VGGT.from_pretrained("facebook/VGGT-1B").to(self.device)
+                self.model = self.apply_precision(self.model, self.precision)
+                self.model = self._apply_sparse()
                 print("✅ Model loaded successfully from HuggingFace!")
             except Exception as e:
                 print(f"⚠️ Could not load model from HuggingFace: {e}")
@@ -172,14 +191,12 @@ class VGGTProcessor:
 
             # Load and preprocess
             input_tensor = load_and_preprocess_images(temp_paths).to(self.device)
+            if self.precision == "fp16":
+                input_tensor = input_tensor.half()
 
             # Run inference
             with torch.no_grad():
-                if self.device.type == "mps":
-                    predictions = self.model(input_tensor)
-                else:
-                    with torch.cuda.amp.autocast(dtype=self.dtype):
-                        predictions = self.model(input_tensor)
+                predictions = self.model(input_tensor)
 
             # Extract depth maps
             depth_tensor = predictions['depth'].cpu().numpy()

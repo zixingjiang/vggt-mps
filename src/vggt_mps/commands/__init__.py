@@ -7,6 +7,7 @@ from .test_runner import run_tests
 from .benchmark import run_benchmark
 from .web_interface import launch_web_interface
 from .download_model import download_model
+from .patch_vendor import apply_vendor_patches
 
 __all__ = [
     "run_reconstruction",
@@ -14,4 +15,5 @@ __all__ = [
     "run_benchmark",
     "launch_web_interface",
     "download_model",
+    "apply_vendor_patches",
 ]
