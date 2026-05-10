@@ -234,6 +234,62 @@ def _patch_aggregator_file() -> bool:
     return True
 
 
+def _patch_visual_util() -> bool:
+    """Patch visual_util.py to download skyseg.onnx to models/ instead of CWD"""
+    filepath = VENDOR_DIR / "visual_util.py"
+    with open(filepath) as f:
+        content = f.read()
+
+    if "_skyseg_path" in content:
+        print("  ✓ visual_util.py already patched (skyseg path)")
+        return False
+
+    # Add _skyseg_path computation after the last import
+    old_imports = "import requests\n\n\n"
+    skyseg_var = (
+        "import requests\n"
+        "\n"
+        "# Path to skyseg.onnx in models/ directory\n"
+        "_skyseg_path = os.path.join(\n"
+        "    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),\n"
+        '    "models", "skyseg.onnx",\n'
+        ")\n"
+        "\n"
+        "\n"
+    )
+    content = content.replace(old_imports, skyseg_var)
+
+    # Redirect download to _skyseg_path with directory creation
+    old_download = (
+        '            # Download skyseg.onnx if it doesn\'t exist\n'
+        '            if not os.path.exists("skyseg.onnx"):\n'
+        '                print("Downloading skyseg.onnx...")\n'
+        '                download_file_from_url(\n'
+        '                    "https://huggingface.co/JianyuanWang/skyseg/resolve/main/skyseg.onnx", "skyseg.onnx"\n'
+        '                )'
+    )
+    new_download = (
+        '            # Download skyseg.onnx if it doesn\'t exist\n'
+        '            os.makedirs(os.path.dirname(_skyseg_path), exist_ok=True)\n'
+        '            if not os.path.exists(_skyseg_path):\n'
+        '                print("Downloading skyseg.onnx...")\n'
+        '                download_file_from_url(\n'
+        '                    "https://huggingface.co/JianyuanWang/skyseg/resolve/main/skyseg.onnx", _skyseg_path\n'
+        '                )'
+    )
+    content = content.replace(old_download, new_download)
+
+    # Load session from _skyseg_path
+    old_session = 'skyseg_session = onnxruntime.InferenceSession("skyseg.onnx")'
+    new_session = 'skyseg_session = onnxruntime.InferenceSession(_skyseg_path)'
+    content = content.replace(old_session, new_session)
+
+    with open(filepath, "w") as f:
+        f.write(content)
+    print("  ✓ visual_util.py patched (skyseg.onnx -> models/)")
+    return True
+
+
 def apply_vendor_patches():
     """Apply all required vendor patches for MPS compatibility and fp16 support"""
     print("🔧 Patching vendor VGGT for Apple Silicon MPS...")
@@ -245,6 +301,7 @@ def apply_vendor_patches():
     patched_any |= _patch_aggregator_file()
     patched_any |= _patch_track_utils(VENDOR_DIR / "vggt" / "heads" / "track_modules" / "utils.py")
     patched_any |= _patch_track_utils(VENDOR_DIR / "vggt" / "dependency" / "track_modules" / "utils.py")
+    patched_any |= _patch_visual_util()
     if not patched_any:
         print("   All patches already applied.")
     else:
