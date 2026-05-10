@@ -41,15 +41,61 @@ def _patch_vggt_file() -> bool:
 
     if "device_type=images.device.type" in content:
         print("  ✓ vggt.py already patched")
+        patched_autocast = False
+    else:
+        old = "with torch.cuda.amp.autocast(enabled=False):"
+        new = "with torch.amp.autocast(device_type=images.device.type, enabled=False):"
+        content = content.replace(old, new)
+        patched_autocast = True
+
+    if "progress_callback" in content:
+        print("  ✓ vggt.py progress_callback already patched")
+        patched_callback = False
+    else:
+        content = content.replace(
+            "def forward(self, images: torch.Tensor, query_points: torch.Tensor = None):",
+            "def forward(self, images: torch.Tensor, query_points: torch.Tensor = None, progress_callback=None):",
+        )
+        content = content.replace(
+            "aggregated_tokens_list, patch_start_idx = self.aggregator(images)",
+            "aggregated_tokens_list, patch_start_idx = self.aggregator(images, progress_callback=progress_callback)",
+        )
+        patched_callback = True
+
+    if patched_autocast or patched_callback:
+        with open(filepath, "w") as f:
+            f.write(content)
+        print("  ✓ vggt.py patched")
+        return True
+    return False
+
+
+def _patch_aggregator_file() -> bool:
+    """Patch aggregator to support progress_callback"""
+    filepath = VENDOR_DIR / "vggt" / "models" / "aggregator.py"
+    with open(filepath) as f:
+        content = f.read()
+
+    if "progress_callback" in content:
+        print("  ✓ aggregator.py already patched")
         return False
 
-    old = "with torch.cuda.amp.autocast(enabled=False):"
-    new = "with torch.amp.autocast(device_type=images.device.type, enabled=False):"
-    content = content.replace(old, new)
+    content = content.replace(
+        "def forward(self, images: torch.Tensor) -> Tuple[List[torch.Tensor], int]:",
+        "def forward(self, images: torch.Tensor, progress_callback=None) -> Tuple[List[torch.Tensor], int]:",
+    )
+    content = content.replace(
+        "for _ in range(self.aa_block_num):",
+        "for step_idx in range(self.aa_block_num):",
+    )
+    content = content.replace(
+        "                output_list.append(concat_inter)\n\n        del concat_inter",
+        "                output_list.append(concat_inter)\n\n            if progress_callback is not None:\n                progress_callback(step_idx + 1, self.aa_block_num)\n\n        del concat_inter",
+    )
 
     with open(filepath, "w") as f:
         f.write(content)
-    print("  ✓ vggt.py patched")
+    print("  ✓ aggregator.py patched")
     return True
 
 
@@ -59,6 +105,7 @@ def apply_vendor_patches():
     patched_any = False
     patched_any |= _patch_utils_file()
     patched_any |= _patch_vggt_file()
+    patched_any |= _patch_aggregator_file()
     if not patched_any:
         print("   All patches already applied.")
     else:

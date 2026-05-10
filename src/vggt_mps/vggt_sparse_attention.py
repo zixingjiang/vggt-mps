@@ -29,7 +29,7 @@ class SparseAttentionAggregator(nn.Module):
         self.megaloc = megaloc
         self.attention_mask = None
 
-    def set_covisibility_mask(self, images: torch.Tensor):
+    def set_covisibility_mask(self, images: torch.Tensor, progress_callback=None):
         """Precompute covisibility mask for current batch"""
         with torch.no_grad():
             # Handle both [S, C, H, W] and [B, S, C, H, W] formats
@@ -44,6 +44,8 @@ class SparseAttentionAggregator(nn.Module):
                     single_image = images[b, i].unsqueeze(0).float()  # DINOv2 expects float32
                     feat = self.megaloc.extract_features(single_image)
                     batch_features.append(feat.squeeze(0))
+                    if progress_callback is not None:
+                        progress_callback(i + 1, S)
                 features.append(torch.stack(batch_features))  # [S, D]
             features = torch.stack(features)  # [B, S, D]
 
@@ -58,12 +60,31 @@ class SparseAttentionAggregator(nn.Module):
 
             self.attention_mask = torch.stack(masks)  # [B, S, S]
 
-    def forward(self, x):
+    def forward(self, x, progress_callback=None):
         """
         Forward with sparse attention.
         Patches global attention blocks to use covisibility mask.
         Frame attention (intra-image) remains dense.
         """
+        # Compute covisibility mask if not already done, with progress
+        if self.attention_mask is None:
+            if progress_callback is not None:
+                B = x.shape[0]
+                S = x.shape[1]
+                aa_steps = self.aggregator.aa_block_num
+                total_steps = B * S + aa_steps
+                step_counter = [0]
+                def combined_cb(*_):
+                    step_counter[0] += 1
+                    progress_callback(step_counter[0], total_steps)
+                self.set_covisibility_mask(x, progress_callback=combined_cb)
+                agg_cb = combined_cb
+            else:
+                self.set_covisibility_mask(x)
+                agg_cb = None
+        else:
+            agg_cb = progress_callback
+
         original_forwards = []
 
         if self.attention_mask is not None and hasattr(self.aggregator, 'global_blocks'):
@@ -108,7 +129,7 @@ class SparseAttentionAggregator(nn.Module):
 
                 attn_inst.forward = types.MethodType(make_patched(mask), attn_inst)
 
-        output = self.aggregator(x)
+        output = self.aggregator(x, progress_callback=agg_cb)
 
         for obj, fn in original_forwards:
             obj.forward = fn
@@ -147,13 +168,9 @@ def make_vggt_sparse(
     # Override forward to set mask
     original_forward = vggt_model.forward
 
-    def forward_with_mask(images, query_points=None):
-        # Set covisibility mask for this batch
-        if hasattr(vggt_model.aggregator, 'set_covisibility_mask'):
-            vggt_model.aggregator.set_covisibility_mask(images)
-
-        # Call original forward
-        return original_forward(images, query_points)
+    def forward_with_mask(images, query_points=None, progress_callback=None):
+        # Call original forward (mask is computed inside SparseAttentionAggregator.forward)
+        return original_forward(images, query_points, progress_callback=progress_callback)
 
     vggt_model.forward = forward_with_mask
 

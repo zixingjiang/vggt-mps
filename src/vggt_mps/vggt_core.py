@@ -8,6 +8,7 @@ from PIL import Image
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 import sys
+from tqdm.auto import tqdm
 
 # Add VGGT repo to path
 REPO_PATH = Path(__file__).parent.parent.parent / "vendor" / "vggt"
@@ -175,12 +176,17 @@ class VGGTProcessor:
         try:
             from vggt.utils.load_fn import load_and_preprocess_images
 
+            pbar = tqdm(total=100, desc="Reconstruction",
+                        bar_format="{desc}: {percentage:3.0f}%|{bar}| {elapsed}")
+
             # Save images temporarily for VGGT loader
             import tempfile
             import shutil
+            pbar.set_description("Saving images")
             temp_dir = Path(tempfile.mkdtemp())
             temp_paths = []
 
+            n_images = len(images)
             for i, img in enumerate(images):
                 temp_path = temp_dir / f"input_{i:03d}.jpg"
                 if isinstance(img, np.ndarray):
@@ -188,21 +194,46 @@ class VGGTProcessor:
                 else:
                     img.save(temp_path)
                 temp_paths.append(str(temp_path))
+                pbar.update(10 / n_images)
 
             # Load and preprocess
+            pbar.set_description("Loading and preprocessing")
             input_tensor = load_and_preprocess_images(temp_paths).to(self.device)
             if self.precision == "fp16":
                 input_tensor = input_tensor.half()
+            pbar.update(5)
 
             # Run inference
-            with torch.no_grad():
-                predictions = self.model(input_tensor)
+            pbar.set_description("Running VGGT inference")
+            agg = self.model.aggregator
+            aa_steps = getattr(agg, 'aa_block_num', None)
+            if aa_steps is None and hasattr(agg, 'aggregator'):
+                aa_steps = getattr(agg.aggregator, 'aa_block_num', None)
+            if aa_steps is not None:
+                start_pos = pbar.n
+                def on_progress(cur, total):
+                    pbar.n = start_pos + 60.0 * cur / total
+                    pbar.refresh()
+                try:
+                    with torch.no_grad():
+                        predictions = self.model(input_tensor, progress_callback=on_progress)
+                except TypeError:
+                    with torch.no_grad():
+                        predictions = self.model(input_tensor)
+                    pbar.update(60)
+            else:
+                with torch.no_grad():
+                    predictions = self.model(input_tensor)
+                pbar.update(60)
 
             # Extract depth maps
+            pbar.set_description("Extracting depth maps")
             depth_tensor = predictions['depth'].cpu().numpy()
             depth_maps = [depth_tensor[0, i, :, :, 0] for i in range(depth_tensor.shape[1])]
+            pbar.update(5)
 
             # Convert pose encodings to camera matrices and unproject depth
+            pbar.set_description("Converting poses")
             from vggt.utils.pose_enc import pose_encoding_to_extri_intri
             from vggt.utils.geometry import unproject_depth_map_to_point_map
 
@@ -211,17 +242,26 @@ class VGGTProcessor:
             extrinsic, intrinsic = pose_encoding_to_extri_intri(pose_enc, image_hw)
             extrinsic = extrinsic.cpu().numpy().squeeze(0)
             intrinsic = intrinsic.cpu().numpy().squeeze(0)
+            pbar.update(5)
 
+            pbar.set_description("Unprojecting depth to 3D")
             depth_for_unproject = depth_tensor[0]
             points_3d = unproject_depth_map_to_point_map(depth_for_unproject, extrinsic, intrinsic)
+            pbar.update(5)
 
+            pbar.set_description("Sampling point cloud")
             step = 10
             point_cloud = points_3d[:, ::step, ::step, :].reshape(-1, 3)
+            pbar.update(5)
 
+            pbar.set_description("Extracting point colors")
             colors_np = input_tensor.detach().cpu().float().numpy()
             colors_np = colors_np.transpose(0, 2, 3, 1)
             point_colors = (colors_np[:, ::step, ::step, :] * 255).clip(0, 255).astype(np.uint8)
             point_colors = point_colors.reshape(-1, 3)
+            pbar.update(5)
+
+            pbar.close()
 
             result = {
                 'depth_maps': depth_maps,
