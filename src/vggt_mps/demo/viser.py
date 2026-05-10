@@ -29,7 +29,7 @@ if _vggt_repo not in _sys.path:
 
 from visual_util import segment_sky, download_file_from_url
 from vggt.models.vggt import VGGT
-from vggt_mps.config import MODEL_DIR, get_precision, get_sparse_enabled
+from vggt_mps.config import MODEL_DIR, get_precision
 from vggt_mps.vggt_core import VGGTProcessor
 from vggt.utils.load_fn import load_and_preprocess_images
 from vggt.utils.geometry import closed_form_inverse_se3, unproject_depth_map_to_point_map
@@ -278,9 +278,6 @@ def run(args):
     model.eval()
     model = model.to(device)
     model = VGGTProcessor.apply_precision(model, get_precision())
-    if get_sparse_enabled():
-        from vggt_mps.vggt_sparse_attention import make_vggt_sparse
-        model = make_vggt_sparse(model, device=device)
 
     print(f"Loading images from {args.image_folder}...")
     image_names = glob.glob(os.path.join(args.image_folder, "*"))

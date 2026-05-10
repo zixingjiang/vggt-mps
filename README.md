@@ -27,7 +27,6 @@ Given N input images, VGGT predicts:
 The upstream VGGT model is a 1B-parameter transformer trained on multi-view geometry tasks. This repo wraps it with:
 
 - MPS device detection and dtype handling (float32 for Metal compatibility)
-- A sparse attention module (`vggt_sparse_attention.py`) that patches the model at runtime for O(n) memory scaling instead of O(n^2)
 - A unified CLI (`vggt` command with subcommands)
 - A Gradio web interface
 - An MCP server for Claude Desktop integration
@@ -36,26 +35,13 @@ The upstream VGGT model is a 1B-parameter transformer trained on multi-view geom
 vggt-mps/
   src/
     vggt_core.py                # Core VGGT processing
-    vggt_sparse_attention.py    # Runtime sparse attention patch
     config.py                   # Centralized configuration
     visualization.py            # 3D visualization
     commands/                   # CLI subcommands (demo, reconstruct, test, benchmark, web)
     utils/                      # Model loader, image utils, export
-  tests/                        # MPS, sparse attention, integration tests
+  tests/                        # MPS and integration tests
   vendor/vggt/                   # VGGT upstream source (git submodule)
 ```
-
-## Sparse attention
-
-The sparse attention module replaces standard O(n^2) cross-view attention with a covisibility-masked variant. No retraining required -- it patches the loaded model at runtime.
-
-| Images | Standard memory | Sparse memory | Reduction |
-|---|---|---|---|
-| 100 | O(10K) | O(1K) | 10x |
-| 500 | O(250K) | O(5K) | 50x |
-| 1000 | O(1M) | O(10K) | 100x |
-
-Output difference vs. standard attention: reported as 0.000000 in tests. In practice this means numerically identical within float32 precision.
 
 ## Requirements
 
@@ -98,22 +84,11 @@ vggt demo gradio                       # launch Gradio 3D UI
 vggt demo viser --image-folder data/   # launch Viser 3D viewer
 vggt demo colmap --scene-dir data/     # COLMAP reconstruction
 vggt reconstruct data/*.jpg            # your own images
-vggt reconstruct --sparse data/*.jpg   # sparse attention for large sets
 vggt reconstruct --export ply data/*.jpg
 vggt web                               # launch Gradio UI
 vggt web --port 8080 --share           # public link
 vggt test --suite all                  # run test suite
 vggt benchmark --compare               # performance comparison
-```
-
-### Python
-
-```python
-from src.vggt_sparse_attention import make_vggt_sparse
-
-# Patch any loaded VGGT model for sparse attention
-sparse_model = make_vggt_sparse(model, device="mps")
-output = sparse_model(images)
 ```
 
 ### MCP server (Claude Desktop)
@@ -157,7 +132,6 @@ Available MCP tools: `vggt_quick_start_inference`, `vggt_extract_video_frames`, 
 - Uses float32 exclusively; MPS does not support float16 autocast for this model.
 - The `vggt download` command pulls ~5 GB over the network with no resume support.
 - Not published to PyPI yet. Install from source.
-- Sparse attention memory numbers in the table above are asymptotic ratios, not measured byte counts.
 - The vendored `vendor/vggt/` submodule tracks upstream facebookresearch/vggt.
 
 ## References

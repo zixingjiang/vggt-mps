@@ -27,7 +27,7 @@ from vggt.models.vggt import VGGT
 from vggt.utils.load_fn import load_and_preprocess_images
 from vggt.utils.pose_enc import pose_encoding_to_extri_intri
 from vggt.utils.geometry import unproject_depth_map_to_point_map
-from vggt_mps.config import get_model_path, get_precision, get_sparse_enabled
+from vggt_mps.config import get_model_path, get_precision
 from vggt_mps.vggt_core import VGGTProcessor
 
 
@@ -54,10 +54,6 @@ else:
 model.eval()
 model = model.to(_DEVICE)
 model = VGGTProcessor.apply_precision(model, get_precision())
-if get_sparse_enabled():
-    from vggt_mps.vggt_sparse_attention import make_vggt_sparse
-    model = make_vggt_sparse(model, device=_DEVICE)
-
 
 def run_model(target_dir, model) -> dict:
     print(f"Processing images from {target_dir}")

@@ -11,7 +11,6 @@ from vggt_mps.config import (
     OUTPUT_DIR,
     TEST_DATA,
     get_precision,
-    get_sparse_enabled,
 )
 from vggt_mps.vggt_core import VGGTProcessor
 from vggt_mps.visualization import create_visualizations
@@ -53,7 +52,6 @@ def run(args):
     print(f"Device:   {DEVICE}")
     print(f"Dataset:  {dataset} ({len(image_paths)} / {use_count} images)")
     print(f"Precision: {get_precision()}")
-    print(f"Sparse:   {get_sparse_enabled()}")
     print("-" * 60)
 
     images = []
@@ -63,7 +61,7 @@ def run(args):
         print(f"  Loaded: {p.name} ({img.size[0]}x{img.size[1]})")
 
     print(f"\n🔮 Running VGGT reconstruction on {len(images)} images...")
-    processor = VGGTProcessor(device=DEVICE, sparse=get_sparse_enabled())
+    processor = VGGTProcessor(device=DEVICE)
 
     try:
         result = processor.process_images(images)

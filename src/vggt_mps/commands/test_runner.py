@@ -44,14 +44,6 @@ def run_tests(args):
         suite.addTests(loader.loadTestsFromTestCase(TestMPSSupport))
         suite.addTests(loader.loadTestsFromTestCase(TestMPSOperations))
 
-    elif args.suite == "sparse":
-        # Sparse attention tests
-        print("Running sparse attention tests...")
-        sys.path.insert(0, str(test_dir.parent))
-        from tests.test_sparse import TestSparseAttention, TestCovisibility
-        suite.addTests(loader.loadTestsFromTestCase(TestSparseAttention))
-        suite.addTests(loader.loadTestsFromTestCase(TestCovisibility))
-
     elif args.suite == "all":
         # All tests
         print("Running all tests...")

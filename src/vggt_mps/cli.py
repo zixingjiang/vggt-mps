@@ -20,7 +20,6 @@ class Reconstruct:
     """3D reconstruction from images"""
     images: Annotated[tuple[str, ...], tyro.conf.Positional]
     precision: Literal["fp32", "fp16"] = "fp32"
-    sparse: bool = False
     output: str = "outputs"
     export: Optional[Literal["ply", "obj", "glb"]] = None
 
@@ -29,7 +28,6 @@ class Reconstruct:
 class Gradio:
     """Launch Gradio 3D reconstruction UI"""
     precision: Literal["fp32", "fp16"] = "fp32"
-    sparse: bool = False
     port: int = 7860
     share: bool = False
 
@@ -38,7 +36,6 @@ class Gradio:
 class Viser:
     """Launch Viser 3D viewer"""
     precision: Literal["fp32", "fp16"] = "fp32"
-    sparse: bool = False
     image_folder: str = "examples/kitchen/images/"
     use_point_map: bool = False
     background_mode: bool = False
@@ -52,7 +49,6 @@ class Colmap:
     """COLMAP-format 3D reconstruction"""
     scene_dir: str
     precision: Literal["fp32", "fp16"] = "fp32"
-    sparse: bool = False
     seed: int = 42
     use_ba: bool = False
     max_reproj_error: float = 8.0
@@ -69,7 +65,6 @@ class Colmap:
 class Web:
     """Launch web interface"""
     precision: Literal["fp32", "fp16"] = "fp32"
-    sparse: bool = False
     port: int = 7860
     share: bool = False
 
@@ -78,15 +73,13 @@ class Web:
 class Test:
     """Run tests"""
     precision: Literal["fp32", "fp16"] = "fp32"
-    sparse: bool = False
-    suite: Literal["all", "mps", "sparse", "quick"] = "quick"
+    suite: Literal["all", "mps", "quick"] = "quick"
 
 
 @dataclass
 class Benchmark:
     """Benchmark performance"""
     precision: Literal["fp32", "fp16"] = "fp32"
-    sparse: bool = False
     images: int = 10
     compare: bool = False
 
@@ -95,7 +88,6 @@ class Benchmark:
 class Download:
     """Download VGGT model"""
     precision: Literal["fp32", "fp16"] = "fp32"
-    sparse: bool = False
     source: Literal["huggingface", "direct"] = "huggingface"
 
 
@@ -103,7 +95,6 @@ class Download:
 class Patch:
     """Patch vendor VGGT files for MPS compatibility"""
     precision: Literal["fp32", "fp16"] = "fp32"
-    sparse: bool = False
 
 
 @dataclass
@@ -115,7 +106,6 @@ class Quick:
     ] = "kitchen"
     images: int = 4
     precision: Literal["fp32", "fp16"] = "fp32"
-    sparse: bool = False
 
 
 # ── Subcommand groups ─────────────────────────────────────────────────────────
@@ -133,9 +123,8 @@ def main() -> None:
         description="VGGT 3D Reconstruction on Apple Silicon",
     )
 
-    from vggt_mps.config import set_precision, set_sparse_enabled
+    from vggt_mps.config import set_precision
     set_precision(parsed.precision)
-    set_sparse_enabled(parsed.sparse)
 
     try:
         if isinstance(parsed, Quick):

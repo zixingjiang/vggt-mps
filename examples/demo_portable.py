@@ -59,8 +59,8 @@ print(f"\n📸 Found {len(input_images)} images")
 # Try to import VGGT
 try:
     # First try local installation
-    from src.vggt_sparse_attention import PatchedVGGT as VGGT
-    print("✅ Using local VGGT with sparse attention")
+    from vggt.models.vggt import VGGT
+    print("✅ Using local VGGT")
 except ImportError:
     try:
         # Try system VGGT

@@ -14,10 +14,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from vggt_mps.config import (
     DEVICE, OUTPUT_DIR, CAMERA_CONFIG, PROCESSING_CONFIG,
-    SPARSE_CONFIG, EXPORT_FORMATS, get_model_path, is_model_available
+    EXPORT_FORMATS, get_model_path, is_model_available
 )
 from vggt_mps.vggt_core import VGGTProcessor
-from vggt_mps.vggt_sparse_attention import make_vggt_sparse
 from vggt_mps.visualization import create_visualizations
 from vggt_mps.utils.export import export_point_cloud
 
@@ -74,13 +73,10 @@ def run_reconstruction(args):
 
     # Initialize processor
     print(f"\n🚀 Initializing VGGT on {DEVICE}")
-    processor = VGGTProcessor(device=DEVICE, precision=getattr(args, 'precision', 'fp32'), sparse=getattr(args, 'sparse', False))
+    processor = VGGTProcessor(device=DEVICE, precision=getattr(args, 'precision', 'fp32'))
 
     # Process images
     print("\n🔄 Processing images...")
-    if getattr(args, 'sparse', False) and len(images) > 10:
-        print(f"  💡 Sparse attention enabled - handling {len(images)} images efficiently")
-
     try:
         results = processor.process_images(images)
 

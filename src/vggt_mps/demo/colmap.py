@@ -22,7 +22,7 @@ if _vggt_repo not in _sys.path:
 
 from vggt.models.vggt import VGGT
 from vggt.utils.load_fn import load_and_preprocess_images_square
-from vggt_mps.config import get_precision, get_sparse_enabled
+from vggt_mps.config import get_precision
 from vggt_mps.vggt_core import VGGTProcessor
 from vggt.utils.pose_enc import pose_encoding_to_extri_intri
 from vggt.utils.geometry import unproject_depth_map_to_point_map
@@ -106,9 +106,6 @@ def demo_fn(args):
     model.eval()
     model = model.to(device)
     model = VGGTProcessor.apply_precision(model, get_precision())
-    if get_sparse_enabled():
-        from vggt_mps.vggt_sparse_attention import make_vggt_sparse
-        model = make_vggt_sparse(model, device=device)
     print("Model loaded")
 
     image_dir = os.path.join(args.scene_dir, "images")

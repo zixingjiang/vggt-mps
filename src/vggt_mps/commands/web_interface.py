@@ -27,14 +27,13 @@ def launch_web_interface(args):
     import numpy as np
     from PIL import Image
     from vggt_core import VGGTProcessor
-    from vggt_sparse_attention import make_vggt_sparse
     from visualization import create_visualizations
-    from config import DEVICE, SPARSE_CONFIG, OUTPUT_DIR
+    from config import DEVICE, OUTPUT_DIR
 
     # Initialize processor
     processor = VGGTProcessor(device=DEVICE)
 
-    def process_images(images, use_sparse, covis_threshold):
+    def process_images(images):
         """Process uploaded images through VGGT"""
         if not images:
             return None, None, "Please upload images"
@@ -45,14 +44,6 @@ def launch_web_interface(args):
             if isinstance(img, str):
                 img = Image.open(img)
             img_arrays.append(np.array(img))
-
-        # Apply sparse attention if requested
-        if use_sparse:
-            processor.model = make_vggt_sparse(
-                processor.model,
-                device=DEVICE,
-                threshold=covis_threshold
-            ) if processor.model else None
 
         # Process images
         try:
@@ -76,8 +67,6 @@ def launch_web_interface(args):
             depth_viz = str(output_dir / "depth_maps.png")
 
             status = f"✅ Processed {len(images)} images successfully"
-            if use_sparse:
-                status += f" (Sparse mode, threshold: {covis_threshold})"
 
             return input_viz, depth_viz, status
 
@@ -99,18 +88,6 @@ def launch_web_interface(args):
                     file_count="multiple",
                     file_types=["image"]
                 )
-                use_sparse = gr.Checkbox(
-                    label="Use Sparse Attention (O(n) scaling)",
-                    value=False
-                )
-                covis_threshold = gr.Slider(
-                    label="Covisibility Threshold",
-                    minimum=0.1,
-                    maximum=1.0,
-                    value=SPARSE_CONFIG["covisibility_threshold"],
-                    step=0.1,
-                    visible=False
-                )
                 process_btn = gr.Button("🔮 Run Reconstruction", variant="primary")
 
             with gr.Column(scale=2):
@@ -120,24 +97,16 @@ def launch_web_interface(args):
                     input_viz = gr.Image(label="Input Views", type="filepath")
                     depth_viz = gr.Image(label="Depth Maps", type="filepath")
 
-        # Toggle covisibility slider
-        use_sparse.change(
-            fn=lambda x: gr.update(visible=x),
-            inputs=use_sparse,
-            outputs=covis_threshold
-        )
-
         # Process button
         process_btn.click(
             fn=process_images,
-            inputs=[image_input, use_sparse, covis_threshold],
+            inputs=[image_input],
             outputs=[input_viz, depth_viz, status]
         )
 
         gr.Markdown("""
         ### Features:
         - ⚡ **MPS Acceleration** - Optimized for Apple Silicon
-        - 🔄 **Sparse Attention** - O(n) memory scaling for large scenes
         - 📊 **Depth Estimation** - Per-pixel depth maps
         - 🎯 **3D Reconstruction** - Point clouds from multi-view images
         """)

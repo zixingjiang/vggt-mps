@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "vggt-mps"
 version = "2.0.0"
-description = "VGGT 3D reconstruction optimized for Apple Silicon with sparse attention"
+description = "VGGT 3D reconstruction optimized for Apple Silicon"
 readme = "README.md"
 license = {file = "LICENSE"}
 authors = [
@@ -21,7 +21,6 @@ keywords = [
     "deep-learning",
     "apple-silicon",
     "mps",
-    "sparse-attention",
     "vggt",
 ]
 classifiers = [

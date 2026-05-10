@@ -90,14 +90,8 @@ def get_device() -> torch.device:
 
 DEVICE = get_device()
 
-# Sparse attention configuration
-SPARSE_CONFIG = {
-    "enabled": True,
-    "covisibility_threshold": 0.7,
-    "memory_savings": 100,  # 100x for 1000 images
-}
-
-# Camera parameters (simplified)
+# Precision configuration
+PRECISION = "fp32"
 CAMERA_CONFIG = {
     "fx": 500,
     "fy": 500,
@@ -148,16 +142,6 @@ EXPORT_FORMATS = {
 # Precision configuration
 PRECISION = "fp32"
 
-# Sparse attention configuration
-SPARSE_ENABLED = False
-
-def set_sparse_enabled(val: bool) -> None:
-    global SPARSE_ENABLED
-    SPARSE_ENABLED = bool(val)
-
-def get_sparse_enabled() -> bool:
-    return SPARSE_ENABLED
-
 def set_precision(val: str) -> None:
     global PRECISION
     if val not in ("fp32", "fp16"):
@@ -179,23 +163,10 @@ def load_from_env() -> None:
     Load configuration from environment variables.
 
     Supported environment variables:
-        USE_SPARSE_ATTENTION: Enable/disable sparse attention (true/false)
-        COVISIBILITY_THRESHOLD: Threshold for covisibility detection (float)
         WEB_PORT: Port for web interface (int)
         WEB_SHARE: Enable public sharing for Gradio (true/false)
     """
-    global SPARSE_CONFIG, SPARSE_ENABLED, WEB_CONFIG
-
-    if os.getenv("USE_SPARSE_ATTENTION"):
-        val = os.getenv("USE_SPARSE_ATTENTION").lower() == "true"
-        SPARSE_CONFIG["enabled"] = val
-        set_sparse_enabled(val)
-
-    if os.getenv("COVISIBILITY_THRESHOLD"):
-        try:
-            SPARSE_CONFIG["covisibility_threshold"] = float(os.getenv("COVISIBILITY_THRESHOLD"))
-        except ValueError as e:
-            print(f"⚠️ Invalid COVISIBILITY_THRESHOLD: {e}")
+    global WEB_CONFIG
 
     if os.getenv("WEB_PORT"):
         try:

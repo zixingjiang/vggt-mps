@@ -19,25 +19,17 @@ if REPO_PATH.exists():
 class VGGTProcessor:
     """VGGT model processor for 3D reconstruction"""
 
-    def __init__(self, device: Union[str, torch.device] = "mps", precision: str = "fp32", sparse: bool = False):
+    def __init__(self, device: Union[str, torch.device] = "mps", precision: str = "fp32"):
         """
         Initialize VGGT processor
 
         Args:
             device: Device to run model on (mps, cpu)
             precision: Inference precision ('fp32' or 'fp16')
-            sparse: Use sparse attention for O(n) memory scaling
         """
         self.device = torch.device(device) if isinstance(device, str) else device
         self.model = None
         self.precision = precision
-        self.sparse = sparse
-
-    def _apply_sparse(self):
-        if self.sparse:
-            from vggt_mps.vggt_sparse_attention import make_vggt_sparse
-            self.model = make_vggt_sparse(self.model, device=str(self.device))
-        return self.model
 
     @staticmethod
     def apply_precision(model, precision: str):
@@ -93,10 +85,10 @@ class VGGTProcessor:
                     raise ValueError(f"Invalid checkpoint format: expected dict, got {type(checkpoint)}")
 
                 self.model.load_state_dict(checkpoint)
+                del checkpoint  # free fp32 weights immediately
                 self.model = self.model.to(self.device)
                 self.model = self.apply_precision(self.model, self.precision)
                 print("✅ Model loaded successfully from local path!")
-                self.model = self._apply_sparse()
                 return  # Success - exit early
             except Exception as e:
                 print(f"⚠️ Error loading model from disk: {e}")
@@ -118,7 +110,6 @@ class VGGTProcessor:
             try:
                 self.model = VGGT.from_pretrained("facebook/VGGT-1B").to(self.device)
                 self.model = self.apply_precision(self.model, self.precision)
-                self.model = self._apply_sparse()
                 print("✅ Model loaded successfully from HuggingFace!")
             except Exception as e:
                 print(f"⚠️ Could not load model from HuggingFace: {e}")
