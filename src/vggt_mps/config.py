@@ -151,6 +151,24 @@ def set_precision(val: str) -> None:
 def get_precision() -> str:
     return PRECISION
 
+# ── Memory reporting ───────────────────────────────────────────────────────
+
+def get_mps_memory_mb() -> float:
+    """Return current MPS allocated memory in MB, or -1 if not available."""
+    try:
+        import torch.mps
+        return torch.mps.current_allocated_memory() / (1024 * 1024)
+    except Exception:
+        return -1.0
+
+def get_mps_driver_memory_mb() -> float:
+    """Return MPS driver-allocated memory in MB (total including cached), or -1 if not available."""
+    try:
+        import torch.mps
+        return torch.mps.driver_allocated_memory() / (1024 * 1024)
+    except Exception:
+        return -1.0
+
 # Logging configuration
 LOGGING = {
     "level": os.getenv("LOG_LEVEL", "INFO"),

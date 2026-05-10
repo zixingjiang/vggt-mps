@@ -35,6 +35,8 @@ class VGGTProcessor:
     def apply_precision(model, precision: str):
         if precision == "fp16":
             model = model.half()
+            p = next(model.parameters())
+            print(f"  Model converted to fp16 (dtype={p.dtype}, device={p.device})")
         return model
 
     def load_model(self, model_path: Optional[Path] = None) -> None:
@@ -88,6 +90,10 @@ class VGGTProcessor:
                 del checkpoint  # free fp32 weights immediately
                 self.model = self.model.to(self.device)
                 self.model = self.apply_precision(self.model, self.precision)
+                if self.precision == "fp16" and self.device.type == "mps":
+                    import gc
+                    gc.collect()
+                    torch.mps.empty_cache()
                 print("✅ Model loaded successfully from local path!")
                 return  # Success - exit early
             except Exception as e:
@@ -110,6 +116,10 @@ class VGGTProcessor:
             try:
                 self.model = VGGT.from_pretrained("facebook/VGGT-1B").to(self.device)
                 self.model = self.apply_precision(self.model, self.precision)
+                if self.precision == "fp16" and self.device.type == "mps":
+                    import gc
+                    gc.collect()
+                    torch.mps.empty_cache()
                 print("✅ Model loaded successfully from HuggingFace!")
             except Exception as e:
                 print(f"⚠️ Could not load model from HuggingFace: {e}")
@@ -194,6 +204,13 @@ class VGGTProcessor:
                 input_tensor = input_tensor.half()
             pbar.update(5)
 
+            from vggt_mps.config import get_mps_memory_mb, get_mps_driver_memory_mb
+            mem_before = get_mps_memory_mb()
+            drv_before = get_mps_driver_memory_mb()
+            if mem_before > 0:
+                print(f"\n  MPS memory before inference: {mem_before:.0f} MB  "
+                      f"(driver: {drv_before:.0f} MB)")
+
             # Run inference
             pbar.set_description("Running VGGT inference")
             agg = self.model.aggregator
@@ -216,6 +233,14 @@ class VGGTProcessor:
                 with torch.no_grad():
                     predictions = self.model(input_tensor)
                 pbar.update(60)
+
+            mem_after = get_mps_memory_mb()
+            drv_after = get_mps_driver_memory_mb()
+            if mem_after > 0:
+                print(f"  MPS memory after inference: {mem_after:.0f} MB  "
+                      f"(driver: {drv_after:.0f} MB, "
+                      f"Δ={mem_after - mem_before:+.0f} MB, "
+                      f"driver Δ={drv_after - drv_before:+.0f} MB)")
 
             # Extract depth maps
             pbar.set_description("Extracting depth maps")

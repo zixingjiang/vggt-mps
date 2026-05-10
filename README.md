@@ -129,7 +129,7 @@ Available MCP tools: `vggt_quick_start_inference`, `vggt_extract_video_frames`, 
 ## Limitations
 
 - Runs on Apple Silicon only. No CUDA path in this repo (use upstream VGGT for that).
-- Uses float32 exclusively; MPS does not support float16 autocast for this model.
+- Uses float32 by default. Use `--precision fp16` for ~50% memory savings (requires PyTorch 2.5+).
 - The `vggt download` command pulls ~5 GB over the network with no resume support.
 - Not published to PyPI yet. Install from source.
 - The vendored `vendor/vggt/` submodule tracks upstream facebookresearch/vggt.

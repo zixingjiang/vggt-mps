@@ -61,7 +61,7 @@ def run(args):
         print(f"  Loaded: {p.name} ({img.size[0]}x{img.size[1]})")
 
     print(f"\n🔮 Running VGGT reconstruction on {len(images)} images...")
-    processor = VGGTProcessor(device=DEVICE)
+    processor = VGGTProcessor(device=DEVICE, precision=get_precision())
 
     try:
         result = processor.process_images(images)
