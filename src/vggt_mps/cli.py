@@ -19,7 +19,7 @@ import tyro.conf
 class Reconstruct:
     """3D reconstruction from images"""
     images: Annotated[tuple[str, ...], tyro.conf.Positional]
-    precision: Literal["fp32", "fp16"] = "fp32"
+    half: Annotated[bool, tyro.conf.arg(help="use half precision (fp16) for inference")] = False
     output: str = "outputs"
     export: Optional[Literal["ply", "obj", "glb"]] = None
 
@@ -27,7 +27,7 @@ class Reconstruct:
 @dataclass
 class Gradio:
     """Launch Gradio 3D reconstruction UI"""
-    precision: Literal["fp32", "fp16"] = "fp32"
+    half: Annotated[bool, tyro.conf.arg(help="use half precision (fp16) for inference")] = False
     port: int = 7860
     share: bool = False
 
@@ -35,7 +35,7 @@ class Gradio:
 @dataclass
 class Viser:
     """Launch Viser 3D viewer"""
-    precision: Literal["fp32", "fp16"] = "fp32"
+    half: Annotated[bool, tyro.conf.arg(help="use half precision (fp16) for inference")] = False
     image_folder: str = "examples/kitchen/images/"
     use_point_map: bool = False
     background_mode: bool = False
@@ -48,7 +48,7 @@ class Viser:
 class Colmap:
     """COLMAP-format 3D reconstruction"""
     scene_dir: str
-    precision: Literal["fp32", "fp16"] = "fp32"
+    half: Annotated[bool, tyro.conf.arg(help="use half precision (fp16) for inference")] = False
     seed: int = 42
     use_ba: bool = False
     max_reproj_error: float = 8.0
@@ -64,7 +64,7 @@ class Colmap:
 @dataclass
 class Web:
     """Launch web interface"""
-    precision: Literal["fp32", "fp16"] = "fp32"
+    half: Annotated[bool, tyro.conf.arg(help="use half precision (fp16) for inference")] = False
     port: int = 7860
     share: bool = False
 
@@ -72,14 +72,14 @@ class Web:
 @dataclass
 class Test:
     """Run tests"""
-    precision: Literal["fp32", "fp16"] = "fp32"
+    half: Annotated[bool, tyro.conf.arg(help="use half precision (fp16) for inference")] = False
     suite: Literal["all", "mps", "quick"] = "quick"
 
 
 @dataclass
 class Benchmark:
     """Benchmark performance"""
-    precision: Literal["fp32", "fp16"] = "fp32"
+    half: Annotated[bool, tyro.conf.arg(help="use half precision (fp16) for inference")] = False
     images: int = 10
     compare: bool = False
 
@@ -87,14 +87,12 @@ class Benchmark:
 @dataclass
 class Download:
     """Download VGGT model"""
-    precision: Literal["fp32", "fp16"] = "fp32"
     source: Literal["huggingface", "direct"] = "huggingface"
 
 
 @dataclass
 class Patch:
     """Patch vendor VGGT files for MPS compatibility"""
-    precision: Literal["fp32", "fp16"] = "fp32"
 
 
 @dataclass
@@ -105,7 +103,7 @@ class Quick:
         "single_oil_painting", "single_cartoon",
     ] = "kitchen"
     images: int = 4
-    precision: Literal["fp32", "fp16"] = "fp32"
+    half: Annotated[bool, tyro.conf.arg(help="use half precision (fp16) for inference")] = False
 
 
 # ── Subcommand groups ─────────────────────────────────────────────────────────
@@ -124,7 +122,7 @@ def main() -> None:
     )
 
     from vggt_mps.config import set_precision
-    set_precision(parsed.precision)
+    set_precision("fp16" if getattr(parsed, 'half', False) else "fp32")
 
     try:
         if isinstance(parsed, Quick):

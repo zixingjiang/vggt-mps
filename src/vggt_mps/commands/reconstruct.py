@@ -73,7 +73,7 @@ def run_reconstruction(args):
 
     # Initialize processor
     print(f"\n🚀 Initializing VGGT on {DEVICE}")
-    processor = VGGTProcessor(device=DEVICE, precision=getattr(args, 'precision', 'fp32'))
+    processor = VGGTProcessor(device=DEVICE, precision='fp16' if getattr(args, 'half', False) else 'fp32')
 
     # Process images
     print("\n🔄 Processing images...")

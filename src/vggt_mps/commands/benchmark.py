@@ -41,7 +41,7 @@ def run_benchmark(args):
         images.append(img_array)
 
     # Initialize processor
-    processor = VGGTProcessor(device=DEVICE, precision=getattr(args, 'precision', 'fp32'))
+    processor = VGGTProcessor(device=DEVICE, precision='fp16' if getattr(args, 'half', False) else 'fp32')
 
     results = {}
 
