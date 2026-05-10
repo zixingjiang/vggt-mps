@@ -14,7 +14,8 @@ def create_visualizations(
     depth_maps: List[np.ndarray],
     output_dir: Path,
     camera_poses: Optional[np.ndarray] = None,
-    point_cloud: Optional[np.ndarray] = None
+    point_cloud: Optional[np.ndarray] = None,
+    point_colors: Optional[np.ndarray] = None,
 ) -> List[Path]:
     """
     Create visualization outputs for VGGT results
@@ -25,6 +26,7 @@ def create_visualizations(
         output_dir: Directory to save visualizations
         camera_poses: Optional camera pose estimates
         point_cloud: Optional 3D point cloud
+        point_colors: Optional Nx3 array of RGB colors (0-255) for point cloud
 
     Returns:
         List of created file paths
@@ -77,11 +79,14 @@ def create_visualizations(
         if len(point_cloud) > max_points:
             indices = np.random.choice(len(point_cloud), max_points, replace=False)
             points = point_cloud[indices]
+            colors_sub = point_colors[indices] if point_colors is not None else None
         else:
             points = point_cloud
+            colors_sub = point_colors
 
+        scatter_c = colors_sub / 255.0 if colors_sub is not None else points[:, 2]
         ax.scatter(points[:, 0], points[:, 1], points[:, 2],
-                  c=points[:, 2], cmap='viridis', s=1, alpha=0.6)
+                  c=scatter_c, s=1, alpha=0.6)
 
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
@@ -95,7 +100,7 @@ def create_visualizations(
 
         # Export point cloud to PLY
         ply_path = output_dir / "point_cloud.ply"
-        export_ply(point_cloud, ply_path)
+        export_ply(point_cloud, ply_path, colors=point_colors)
         output_files.append(ply_path)
 
     return output_files

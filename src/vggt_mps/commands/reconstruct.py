@@ -89,17 +89,20 @@ def run_reconstruction(args):
             depth_maps = results.get('depth_maps', [])
             camera_poses = results.get('camera_poses', None)
             point_cloud = results.get('point_cloud', None)
+            point_colors = results.get('point_colors', None)
         else:
             depth_maps = results
             camera_poses = None
             point_cloud = None
+            point_colors = None
 
         # Create visualizations
         print("\n📊 Creating visualizations...")
         viz_files = create_visualizations(
             images, depth_maps, output_dir,
             camera_poses=camera_poses,
-            point_cloud=point_cloud
+            point_cloud=point_cloud,
+            point_colors=point_colors,
         )
 
         # Export if requested

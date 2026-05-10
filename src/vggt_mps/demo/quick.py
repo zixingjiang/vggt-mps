@@ -75,10 +75,12 @@ def run(args):
         depth_maps = result.get("depth_maps", [])
         camera_poses = result.get("camera_poses")
         point_cloud = result.get("point_cloud")
+        point_colors = result.get("point_colors")
     else:
         depth_maps = result
         camera_poses = None
         point_cloud = None
+        point_colors = None
 
     if not depth_maps:
         print("❌ No depth maps produced")
@@ -91,6 +93,7 @@ def run(args):
         OUTPUT_DIR,
         camera_poses=camera_poses,
         point_cloud=point_cloud,
+        point_colors=point_colors,
     )
 
     print("\n" + "=" * 60)

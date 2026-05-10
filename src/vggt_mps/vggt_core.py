@@ -218,10 +218,16 @@ class VGGTProcessor:
             step = 10
             point_cloud = points_3d[:, ::step, ::step, :].reshape(-1, 3)
 
+            colors_np = input_tensor.detach().cpu().float().numpy()
+            colors_np = colors_np.transpose(0, 2, 3, 1)
+            point_colors = (colors_np[:, ::step, ::step, :] * 255).clip(0, 255).astype(np.uint8)
+            point_colors = point_colors.reshape(-1, 3)
+
             result = {
                 'depth_maps': depth_maps,
                 'camera_poses': {'extrinsic': extrinsic, 'intrinsic': intrinsic},
                 'point_cloud': point_cloud,
+                'point_colors': point_colors,
             }
 
             return result
