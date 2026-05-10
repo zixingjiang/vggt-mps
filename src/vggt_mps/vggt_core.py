@@ -202,11 +202,26 @@ class VGGTProcessor:
             depth_tensor = predictions['depth'].cpu().numpy()
             depth_maps = [depth_tensor[0, i, :, :, 0] for i in range(depth_tensor.shape[1])]
 
-            # Return full predictions dict if available
+            # Convert pose encodings to camera matrices and unproject depth
+            from vggt.utils.pose_enc import pose_encoding_to_extri_intri
+            from vggt.utils.geometry import unproject_depth_map_to_point_map
+
+            pose_enc = predictions['pose_enc']
+            image_hw = input_tensor.shape[-2:]
+            extrinsic, intrinsic = pose_encoding_to_extri_intri(pose_enc, image_hw)
+            extrinsic = extrinsic.cpu().numpy().squeeze(0)
+            intrinsic = intrinsic.cpu().numpy().squeeze(0)
+
+            depth_for_unproject = depth_tensor[0]
+            points_3d = unproject_depth_map_to_point_map(depth_for_unproject, extrinsic, intrinsic)
+
+            step = 10
+            point_cloud = points_3d[:, ::step, ::step, :].reshape(-1, 3)
+
             result = {
                 'depth_maps': depth_maps,
-                'camera_poses': predictions.get('poses', None),
-                'point_cloud': self._generate_point_cloud(images, depth_maps)
+                'camera_poses': {'extrinsic': extrinsic, 'intrinsic': intrinsic},
+                'point_cloud': point_cloud,
             }
 
             return result
