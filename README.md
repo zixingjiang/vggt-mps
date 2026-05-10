@@ -94,8 +94,9 @@ The model downloads from [Hugging Face](https://huggingface.co/facebook/VGGT-1B/
 ### CLI
 
 ```bash
-vggt demo                              # run with sample images
-vggt demo --kitchen --images 4         # kitchen dataset, 4 views
+vggt demo gradio                       # launch Gradio 3D UI
+vggt demo viser --image-folder data/   # launch Viser 3D viewer
+vggt demo colmap --scene-dir data/     # COLMAP reconstruction
 vggt reconstruct data/*.jpg            # your own images
 vggt reconstruct --sparse data/*.jpg   # sparse attention for large sets
 vggt reconstruct --export ply data/*.jpg

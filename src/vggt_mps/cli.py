@@ -106,11 +106,18 @@ class Patch:
     sparse: bool = False
 
 
+# ── Subcommand groups ─────────────────────────────────────────────────────────
+
+DemoSubcommand = Annotated[
+    Union[Gradio, Viser, Colmap],
+    tyro.conf.subcommand(name="demo", description="Run vendor-mirrored demos"),
+]
+
 # ── Dispatch ─────────────────────────────────────────────────────────────────
 
 def main() -> None:
     parsed = tyro.cli(
-        Union[Reconstruct, Gradio, Viser, Colmap, Web, Test, Benchmark, Download, Patch],
+        Union[Reconstruct, DemoSubcommand, Web, Test, Benchmark, Download, Patch],
         description="VGGT 3D Reconstruction on Apple Silicon",
     )
 
