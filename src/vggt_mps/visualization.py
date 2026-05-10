@@ -2,6 +2,7 @@
 Visualization utilities for VGGT-MPS
 """
 
+import math
 import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
@@ -16,6 +17,7 @@ def create_visualizations(
     camera_poses: Optional[np.ndarray] = None,
     point_cloud: Optional[np.ndarray] = None,
     point_colors: Optional[np.ndarray] = None,
+    show: bool = False,
 ) -> List[Path]:
     """
     Create visualization outputs for VGGT results
@@ -35,73 +37,62 @@ def create_visualizations(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Create input views visualization
-    fig, axes = plt.subplots(1, len(images), figsize=(4*len(images), 4))
-    if len(images) == 1:
-        axes = [axes]
+    n = len(images)
+    cols = math.ceil(math.sqrt(n))
+    rows = math.ceil(n / cols)
+    fig, axes = plt.subplots(rows, cols, figsize=(2 * cols, 2 * rows))
+    fig.subplots_adjust(hspace=0.0)
+    axes_flat = axes.flat if n > 1 else [axes]
 
     for i, img in enumerate(images):
-        axes[i].imshow(img)
-        axes[i].set_title(f"View {i+1}")
-        axes[i].axis('off')
+        axes_flat[i].imshow(img)
+        axes_flat[i].set_title(f"View {i + 1}")
+        axes_flat[i].axis("off")
+    for i in range(n, rows * cols):
+        axes_flat[i].axis("off")
 
-    plt.suptitle("Input Views")
-    plt.tight_layout()
+    fig.canvas.manager.set_window_title("Input Views")
+    plt.tight_layout(pad=0.5)
     input_path = output_dir / "input_views.png"
     plt.savefig(input_path, dpi=100, bbox_inches='tight')
-    plt.close()
     output_files.append(input_path)
 
     # Create depth maps visualization
-    fig, axes = plt.subplots(1, len(depth_maps), figsize=(4*len(depth_maps), 4))
-    if len(depth_maps) == 1:
-        axes = [axes]
+    n = len(depth_maps)
+    cols = math.ceil(math.sqrt(n))
+    rows = math.ceil(n / cols)
+    fig, axes = plt.subplots(rows, cols, figsize=(2 * cols, 2 * rows))
+    fig.subplots_adjust(hspace=0.0)
+    axes_flat = axes.flat if n > 1 else [axes]
 
     for i, depth in enumerate(depth_maps):
-        im = axes[i].imshow(depth, cmap='viridis')
-        axes[i].set_title(f"Depth {i+1}")
-        axes[i].axis('off')
-        plt.colorbar(im, ax=axes[i], fraction=0.046)
+        im = axes_flat[i].imshow(depth, cmap="viridis")
+        axes_flat[i].set_title(f"Depth {i + 1}")
+        axes_flat[i].axis("off")
+        plt.colorbar(im, ax=axes_flat[i], fraction=0.046)
+    for i in range(n, rows * cols):
+        axes_flat[i].axis("off")
 
-    plt.suptitle("Predicted Depth Maps")
-    plt.tight_layout()
+    fig.canvas.manager.set_window_title("Predicted Depth Maps")
+    plt.tight_layout(pad=0.5)
     depth_path = output_dir / "depth_maps.png"
     plt.savefig(depth_path, dpi=100, bbox_inches='tight')
-    plt.close()
     output_files.append(depth_path)
 
     # Create 3D visualization if point cloud provided
     if point_cloud is not None:
-        fig = plt.figure(figsize=(10, 8))
-        ax = fig.add_subplot(111, projection='3d')
-
-        # Sample points for visualization
-        max_points = 5000
-        if len(point_cloud) > max_points:
-            indices = np.random.choice(len(point_cloud), max_points, replace=False)
-            points = point_cloud[indices]
-            colors_sub = point_colors[indices] if point_colors is not None else None
-        else:
-            points = point_cloud
-            colors_sub = point_colors
-
-        scatter_c = colors_sub / 255.0 if colors_sub is not None else points[:, 2]
-        ax.scatter(points[:, 0], points[:, 1], points[:, 2],
-                  c=scatter_c, s=1, alpha=0.6)
-
-        ax.set_xlabel('X')
-        ax.set_ylabel('Y')
-        ax.set_zlabel('Z')
-        ax.set_title('3D Point Cloud Reconstruction')
-
-        viz_path = output_dir / "3d_reconstruction.png"
-        plt.savefig(viz_path, dpi=100, bbox_inches='tight')
-        plt.close()
-        output_files.append(viz_path)
-
         # Export point cloud to PLY
         ply_path = output_dir / "point_cloud.ply"
         export_ply(point_cloud, ply_path, colors=point_colors)
         output_files.append(ply_path)
+
+        if show:
+            import subprocess
+            subprocess.run(["open", str(ply_path)])
+
+    # Show all figures simultaneously and block until all windows are closed
+    if show:
+        plt.show()
 
     return output_files
 

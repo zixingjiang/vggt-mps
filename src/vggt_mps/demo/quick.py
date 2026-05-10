@@ -94,6 +94,7 @@ def run(args):
         camera_poses=camera_poses,
         point_cloud=point_cloud,
         point_colors=point_colors,
+        show=True,
     )
 
     print("\n" + "=" * 60)
