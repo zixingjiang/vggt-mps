@@ -16,6 +16,7 @@ _OUTPUTS_DIR = Path(__file__).resolve().parents[3] / "outputs"
 import cv2
 import numpy as np
 import torch
+from tqdm.auto import tqdm
 import gradio as gr
 
 _vggt_repo = str(Path(__file__).resolve().parents[3] / "vendor" / "vggt")
@@ -27,7 +28,7 @@ from vggt.models.vggt import VGGT
 from vggt.utils.load_fn import load_and_preprocess_images
 from vggt.utils.pose_enc import pose_encoding_to_extri_intri
 from vggt.utils.geometry import unproject_depth_map_to_point_map
-from vggt_mps.config import get_model_path, get_precision
+from vggt_mps.config import get_model_path, get_precision, get_mps_memory_mb, get_mps_driver_memory_mb
 from vggt_mps.vggt_core import VGGTProcessor
 
 
@@ -70,9 +71,41 @@ def run_model(target_dir, model) -> dict:
         images = images.half()
     print(f"Preprocessed images shape: {images.shape}")
 
+    mem_before = get_mps_memory_mb()
+    drv_before = get_mps_driver_memory_mb()
+    if mem_before > 0:
+        print(f"\n  MPS memory before inference: {mem_before:.0f} MB  (driver: {drv_before:.0f} MB)")
+
     print("Running inference...")
-    with torch.no_grad():
-        predictions = model(images)
+    agg = model.aggregator
+    aa_steps = getattr(agg, 'aa_block_num', None)
+    if aa_steps is None and hasattr(agg, 'aggregator'):
+        aa_steps = getattr(agg.aggregator, 'aa_block_num', None)
+    if aa_steps is not None:
+        pbar = tqdm(total=aa_steps, desc="Running VGGT inference",
+                    bar_format="{desc}: {percentage:3.0f}%|{bar}| {elapsed}")
+        def on_progress(cur, total):
+            pbar.n = cur
+            pbar.refresh()
+        try:
+            with torch.no_grad():
+                predictions = model(images, progress_callback=on_progress)
+        except TypeError:
+            with torch.no_grad():
+                predictions = model(images)
+            pbar.update(aa_steps)
+        pbar.close()
+    else:
+        with torch.no_grad():
+            predictions = model(images)
+
+    mem_after = get_mps_memory_mb()
+    drv_after = get_mps_driver_memory_mb()
+    if mem_after > 0:
+        print(f"  MPS memory after inference: {mem_after:.0f} MB  "
+              f"(driver: {drv_after:.0f} MB, "
+              f"Δ={mem_after - mem_before:+.0f} MB, "
+              f"driver Δ={drv_after - drv_before:+.0f} MB)")
 
     print("Converting pose encoding...")
     extrinsic, intrinsic = pose_encoding_to_extri_intri(predictions["pose_enc"], images.shape[-2:])
