@@ -120,9 +120,21 @@ WEB_CONFIG = {
     "theme": "dark",
 }
 
+# Example dataset paths (from vendor/vggt/examples/)
+_EXAMPLES_DIR = REPO_DIR / "vggt" / "examples"
+_EXAMPLE_DATASETS = {
+    "kitchen":             _EXAMPLES_DIR / "kitchen" / "images",
+    "room":                _EXAMPLES_DIR / "room" / "images",
+    "llff_flower":         _EXAMPLES_DIR / "llff_flower" / "images",
+    "llff_fern":           _EXAMPLES_DIR / "llff_fern" / "images",
+    "single_oil_painting": _EXAMPLES_DIR / "single_oil_painting" / "images",
+    "single_cartoon":      _EXAMPLES_DIR / "single_cartoon" / "images",
+}
+
 # Test data configuration
 TEST_DATA = {
-    "kitchen_path": REPO_DIR / "vggt" / "examples" / "kitchen" / "images",
+    **_EXAMPLE_DATASETS,
+    "kitchen_path": _EXAMPLES_DIR / "kitchen" / "images",
     "test_images": DATA_DIR / "test_images",
 }
 

@@ -106,10 +106,22 @@ class Patch:
     sparse: bool = False
 
 
+@dataclass
+class Quick:
+    """Quick-start reconstruction with example datasets"""
+    dataset: Literal[
+        "kitchen", "room", "llff_flower", "llff_fern",
+        "single_oil_painting", "single_cartoon",
+    ] = "kitchen"
+    images: int = 4
+    precision: Literal["fp32", "fp16"] = "fp32"
+    sparse: bool = False
+
+
 # ── Subcommand groups ─────────────────────────────────────────────────────────
 
 DemoSubcommand = Annotated[
-    Union[Gradio, Viser, Colmap],
+    Union[Quick, Gradio, Viser, Colmap],
     tyro.conf.subcommand(name="demo", description="Run vendor-mirrored demos"),
 ]
 
@@ -126,7 +138,12 @@ def main() -> None:
     set_sparse_enabled(parsed.sparse)
 
     try:
-        if isinstance(parsed, Reconstruct):
+        if isinstance(parsed, Quick):
+            args = argparse.Namespace(**asdict(parsed))
+            from .demo.quick import run as run_quick
+            run_quick(args)
+
+        elif isinstance(parsed, Reconstruct):
             args = argparse.Namespace(**asdict(parsed))
             from .commands.reconstruct import run_reconstruction
             run_reconstruction(args)
